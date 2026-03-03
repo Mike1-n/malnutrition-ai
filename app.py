@@ -64,96 +64,116 @@ def calculate_whz(height, weight, gender):
 
     return round(z_score, 2), category
 
-# --- 2. Styles (High Visibility Theme) ---
-st.markdown("""
+# --- 2. Styles & Theme ---
+if 'theme_toggle' not in st.session_state:
+    st.session_state.theme_toggle = True
+
+st.session_state.theme = 'dark' if st.session_state.theme_toggle else 'light'
+
+if st.session_state.theme == 'dark':
+    theme_css = """
+    :root {
+        --primary-color: #5dade2; 
+        --secondary-color: #48c9b0; 
+        --background-color: #0e1117; 
+        --text-color: #ffffff; 
+        --text-muted: #b0b0b0;
+        --card-bg: #262730; 
+        --danger-color: #ff6b6b; 
+        --warning-color: #ffa502; 
+        --success-color: #2ed573;
+        --metric-border: #333333;
+    }
+    """
+else:
+    theme_css = """
+    :root {
+        --primary-color: #2980b9; 
+        --secondary-color: #16a085; 
+        --background-color: #f0f2f6; 
+        --text-color: #1e1e1e; 
+        --text-muted: #666666;
+        --card-bg: #ffffff; 
+        --danger-color: #e74c3c; 
+        --warning-color: #f39c12; 
+        --success-color: #27ae60;
+        --metric-border: #e0e0e0;
+    }
+    """
+
+st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
 
-    :root {
-        --primary-color: #5dade2; /* Lighter Blue for dark mode */
-        --secondary-color: #48c9b0; /* Lighter Teal */
-        --background-color: #0e1117; /* Very Dark Grey/Black */
-        --text-color: #ffffff; /* White Text */
-        --card-bg: #262730; /* Dark Card Background */
-        --danger-color: #ff6b6b; /* Bright Red */
-        --warning-color: #ffa502; /* Bright Orange */
-        --success-color: #2ed573; /* Bright Green */
-    }
+    {theme_css}
+
 
     /* Global */
-    .stApp {
+    .stApp {{
         background-color: var(--background-color);
         font-family: 'Inter', sans-serif;
-    }
+    }}
     
-    h1, h2, h3, h4, h5, h6 {
+    h1, h2, h3, h4, h5, h6 {{
         color: var(--text-color) !important;
         font-weight: 700;
-    }
+    }}
     
-    p, label, .stMarkdown, .stMetricLabel, [data-testid="stMarkdownContainer"] p {
+    p, label, .stMarkdown, .stMetricLabel, [data-testid="stMarkdownContainer"] p {{
         color: var(--text-color) !important;
-    }
+    }}
     
     /* Fix for Data Editor / DataFrame Visibility */
-    [data-testid="stDataFrame"] {
+    [data-testid="stDataFrame"] {{
         color: var(--text-color) !important;
-    }
-    [data-testid="stDataFrame"] svg {
+    }}
+    [data-testid="stDataFrame"] svg {{
         fill: var(--text-color) !important;
-    }
-    [data-testid="stDataFrame"] button {
+    }}
+    [data-testid="stDataFrame"] button {{
         color: var(--text-color) !important;
-    }
+    }}
 
-    /* Cards */
-    .input-card {
-        background-color: var(--card-bg);
-        padding: 25px;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-        border-top: 5px solid var(--primary-color);
-        margin-bottom: 20px;
-    }
+
 
     /* Metrics */
-    .metric-container {
+    .metric-container {{
         background-color: var(--card-bg);
         padding: 20px;
         border-radius: 12px;
         box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
         text-align: center;
         margin-bottom: 20px;
-        border: 1px solid #eee;
+        border: 1px solid var(--metric-border);
         transition: transform 0.2s;
-    }
-    .metric-container:hover {
+    }}
+    .metric-container:hover {{
         transform: translateY(-5px);
-    }
-    .label-text {
+    }}
+    .label-text {{
         font-size: 0.9rem;
         font-weight: 600;
         color: #7f8c8d;
         text-transform: uppercase;
         letter-spacing: 1px;
-    }
+    }}
     
     /* Status Badges */
-    .status-badge {
+    .status-badge {{
         display: inline-block;
         padding: 6px 16px;
         border-radius: 20px;
         font-weight: 600;
         font-size: 1rem;
         margin-top: 10px;
-    }
-    .status-normal { color: #fff; background-color: var(--success-color); }
-    .status-warning { color: #fff; background-color: var(--warning-color); }
-    .status-danger { color: #fff; background-color: var(--danger-color); }
-    .status-neutral { color: #fff; background-color: #95a5a6; }
+    }}
+    .status-normal {{ color: #fff; background-color: var(--success-color); }}
+    .status-warning {{ color: #fff; background-color: var(--warning-color); }}
+    .status-danger {{ color: #fff; background-color: var(--danger-color); }}
+    .status-neutral {{ color: #fff; background-color: #95a5a6; }}
 
     /* Custom Button */
-    .stButton>button {
+    .stButton>button {{
         background: linear-gradient(135deg, var(--primary-color) 0%, #2980b9 100%);
         color: white !important;
         padding: 0.6rem 2rem;
@@ -163,67 +183,74 @@ st.markdown("""
         font-weight: 600;
         transition: all 0.3s ease;
         width: 100%;
-    }
-    .stButton>button:hover {
+    }}
+    .stButton>button:hover {{
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
-    }
-    .stButton>button p { color: white !important; }
+    }}
+    .stButton>button p {{ color: white !important; }}
 
     /* Recommendation Box */
-    .rec-box {
+    .rec-box {{
         padding: 20px;
         border-radius: 12px;
         margin-top: 20px;
         color: var(--text-color); /* Ensure text is visible */
         box-shadow: 0 4px 6px rgba(0,0,0,0.3); /* Darker shadow */
         background-color: var(--card-bg); /* Use dark card bg */
-    }
-    .rec-critical {
+    }}
+    .rec-critical {{
         border-left: 6px solid var(--danger-color);
         background: linear-gradient(90deg, rgba(255, 107, 107, 0.1) 0%, rgba(255, 107, 107, 0.0) 100%);
-    }
-    .rec-warning {
+    }}
+    .rec-warning {{
         border-left: 6px solid var(--warning-color);
         background: linear-gradient(90deg, rgba(255, 165, 2, 0.1) 0%, rgba(255, 165, 2, 0.0) 100%);
-    }
-    .rec-success {
+    }}
+    .rec-success {{
         border-left: 6px solid var(--success-color);
         background: linear-gradient(90deg, rgba(46, 213, 115, 0.1) 0%, rgba(46, 213, 115, 0.0) 100%);
-    }
+    }}
     
     /* Expander Styling */
-    .streamlit-expanderHeader {
+    .streamlit-expanderHeader {{
         background-color: var(--card-bg); /* Dark background */
         border-radius: 8px;
         font-weight: 600;
         color: var(--primary-color);
-    }
+    }}
     
     /* Progress Bar */
-    .progress-bar-container {
+    .progress-bar-container {{
         width: 100%;
         background-color: #333; /* Dark track */
         border-radius: 10px;
         height: 8px;
         margin-top: 8px;
         overflow: hidden;
-    }
-    .progress-bar-fill {
+    }}
+    .progress-bar-fill {{
         height: 100%;
         border-radius: 10px;
         transition: width 0.5s ease-in-out;
-    }
+    }}
     </style>
 """, unsafe_allow_html=True)
 
 # --- 3. Header ---
-st.markdown("""
-<div style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); padding: 30px; border-radius: 15px; color: white; text-align: center; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);">
-    <h1 style="color: white !important; margin-bottom: 10px;">🏥 Child Malnutrition Longitudinal Analysis</h1>
-    <p style="color: rgba(255,255,255,0.9) !important; font-size: 1.1rem;">AI-Powered Trend Risk Prediction & Clinical Decision Support</p>
-</div>
-""", unsafe_allow_html=True)
+head_col, tog_col = st.columns([6, 1])
+
+with tog_col:
+    st.write("") # Margin top
+    st.toggle("🌙 Mode", key="theme_toggle")
+
+with head_col:
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);">
+        <h1 style="color: white !important; margin-bottom: 5px; font-size: 2.2rem;">🏥 Child Malnutrition Analysis</h1>
+        <p style="color: rgba(255,255,255,0.9) !important; font-size: 1.1rem; margin-bottom: 0;">AI-Powered Trend Risk Prediction & Clinical Decision Support</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 if model is None:
     st.error("⚠️ Model not found. Please train the model first.")
@@ -237,7 +264,6 @@ else:
         # Sections for better organization (Single Page View)
         
         with st.expander("1. 📏 Growth Metrics (Current & History)", expanded=True):
-            st.markdown('<div class="input-card">', unsafe_allow_html=True)
             c1, c2 = st.columns(2)
             with c1: gender = st.selectbox("Gender", ["Male", "Female"])
             with c2: current_age = st.number_input("Age (months)", 0, 60, 24)
@@ -268,10 +294,8 @@ else:
                 },
                 width="stretch"
             )
-            st.markdown('</div>', unsafe_allow_html=True)
 
         with st.expander("2. 💊 Health & Clinical History", expanded=True):
-            st.markdown('<div class="input-card">', unsafe_allow_html=True)
             col_a, col_b = st.columns(2)
             with col_a:
                 # Dynamic Immunization Options based on Age
@@ -307,10 +331,8 @@ else:
                 hiv_exposure = hiv_map[hiv_label]
                 
                 congenital_disease = st.selectbox("Congenital Disease?", ["yes", "no"], index=1)
-            st.markdown('</div>', unsafe_allow_html=True)
 
         with st.expander("3. 🍲 Feeding Practices", expanded=True):
-            st.markdown('<div class="input-card">', unsafe_allow_html=True)
             col_c, col_d = st.columns(2)
             with col_c:
                 # Exclusive Breastfeeding Duration Input
@@ -343,10 +365,8 @@ else:
                     feeding_diversity = 0 # Not applicable yet
                     selected_nutrients = []
 
-            st.markdown('</div>', unsafe_allow_html=True)
             
         with st.expander("4. 🏠 Socio-Economic Factors (SES Score)", expanded=True):
-            st.markdown('<div class="input-card">', unsafe_allow_html=True)
             col_e, col_f = st.columns(2)
             
             with col_e:
@@ -432,14 +452,10 @@ else:
             with c_cat:
                 st.markdown(f"**SES Category:** <span style='color:{ses_color}; font-weight:bold; font-size:1.2em'>{ses_category_label}</span>", unsafe_allow_html=True)
             
-            # Additional water/sanitation inputs for model completeness if not covered by assets
-            with st.expander("Additional WASH Factors (Optional)", expanded=False):
-                water_options = ["yes", "no"]
-                water_default = 0 if has_piped_water else 1
-                water_access = st.selectbox("Access to Clean Water?", water_options, index=water_default)
-                sanitation_access = st.selectbox("Access to Sanitation?", ["yes", "no"], index=0)
+            # Auto-infer WASH factors from assets
+            water_access = "yes" if has_piped_water else "no"
+            sanitation_access = "yes" if ses_score_total >= 5 else "no"  # Reasonable proxy given data
             
-            st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
         predict_btn = st.button("🔍 ANALYZE COMPREHENSIVE RISK", type="primary")
@@ -590,18 +606,18 @@ else:
                 elif prob < 0.7: bar_color = "#f39c12" # Orange
                 else: bar_color = "#e74c3c" # Red
                 
-                contrib_html = "".join([f"<li style='color: #dcdde1; font-size: 0.85rem; margin-bottom: 3px;'>{cf}</li>" for cf in contributing_factors])
+                contrib_html = "".join([f"<li style='color: var(--text-color); font-size: 0.85rem; margin-bottom: 3px;'>{cf}</li>" for cf in contributing_factors])
 
                 st.markdown(f"""
                 <div class="metric-container">
                     <p class="label-text">🤖 Trend Prediction</p>
                     <div class="status-badge {ml_class}">{ml_risk}</div>
-                    <p style="margin-top: 15px; color: #b0b0b0; font-size: 0.9rem;">Probability: <b style="color: #ffffff; font-size: 1.2rem; font-weight: 800;">{prob:.1%}</b></p>
+                    <p style="margin-top: 15px; color: var(--text-muted); font-size: 0.9rem;">Probability: <b style="color: var(--text-color); font-size: 1.2rem; font-weight: 800;">{prob:.1%}</b></p>
                     <div class="progress-bar-container">
                         <div class="progress-bar-fill" style="width: {prob*100}%; background-color: {bar_color};"></div>
                     </div>
-                    <div style="margin-top: 15px; text-align: left; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border-left: 3px solid #3498db;">
-                        <p style="color: #b0b0b0; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px;">Key Risk Factors Influencing This Score:</p>
+                    <div style="margin-top: 15px; text-align: left; background: rgba(0,0,0,0.1); padding: 10px; border-radius: 8px; border-left: 3px solid #3498db;">
+                        <p style="color: var(--text-muted); font-size: 0.85rem; font-weight: bold; margin-bottom: 5px;">Key Risk Factors Influencing This Score:</p>
                         <ul style="padding-left: 20px; margin-bottom: 0;">
                             {contrib_html}
                         </ul>
@@ -625,7 +641,7 @@ else:
                 <div class="metric-container">
                     <p class="label-text">📏 Weight-for-Height Z-Score</p>
                     <div class="status-badge {whz_risk_class}">{whz_category}</div>
-                    <p style="margin-top: 15px; color: #b0b0b0; font-size: 0.9rem;">Value: <b style="color: #ffffff; font-size: 1.2rem; font-weight: 800;">{whz_val_str} SD</b></p>
+                    <p style="margin-top: 15px; color: var(--text-muted); font-size: 0.9rem;">Value: <b style="color: var(--text-color); font-size: 1.2rem; font-weight: 800;">{whz_val_str} SD</b></p>
                 </div>""", unsafe_allow_html=True)
             
             # Weight & BMI & WHZ Trend Charts
@@ -642,12 +658,17 @@ else:
             # df['BMI'] = ... (Removed)
             
             # Function to plot with non-overlapping labels
-            # Function to plot with non-overlapping labels
             def plot_trend(data, x_col, y_col, title, color, y_label):
                 if data.empty: return None
                 
-                # Dark Mode Styles
-                plt.style.use('dark_background')
+                is_dark = st.session_state.theme == 'dark'
+                text_color = 'white' if is_dark else '#2c3e50'
+                
+                if is_dark:
+                    plt.style.use('dark_background')
+                else:
+                    plt.style.use('default')
+                
                 fig, ax = plt.subplots(figsize=(6, 4))
                 fig.patch.set_facecolor('none') # Transparent bg
                 ax.set_facecolor('none')      # Transparent plot area
@@ -662,20 +683,20 @@ else:
                     val_str = f"{txt:.1f}"
                     ax.annotate(val_str, (data[x_col].iloc[i], data[y_col].iloc[i]),
                                 textcoords="offset points", xytext=(0, offset), ha='center',
-                                fontsize=9, fontweight='bold', color='white',
-                                arrowprops=dict(arrowstyle="-", color='white', alpha=0.5))
+                                fontsize=9, fontweight='bold', color=text_color,
+                                arrowprops=dict(arrowstyle="-", color=text_color, alpha=0.5))
 
                 # Formatting
-                ax.set_title(title, fontweight='bold', color='white')
-                ax.set_ylabel(y_label, fontweight='bold', color='white')
-                ax.set_xlabel('Visit Date', fontweight='bold', color='white')
-                ax.grid(True, linestyle='--', alpha=0.3, color='white')
+                ax.set_title(title, fontweight='bold', color=text_color)
+                ax.set_ylabel(y_label, fontweight='bold', color=text_color)
+                ax.set_xlabel('Visit Date', fontweight='bold', color=text_color)
+                ax.grid(True, linestyle='--', alpha=0.3, color=text_color)
                 
                 # Axis Colors
-                ax.tick_params(axis='x', colors='white')
-                ax.tick_params(axis='y', colors='white')
+                ax.tick_params(axis='x', colors=text_color)
+                ax.tick_params(axis='y', colors=text_color)
                 for spine in ax.spines.values():
-                    spine.set_color('white')
+                    spine.set_color(text_color)
                 
                 # Rotate Date Labels
                 fig.autofmt_xdate(rotation=45)
@@ -691,16 +712,14 @@ else:
             # Layout Charts
             # Row 1: Weight (Full Width)
             st.markdown("####") 
-            # Use Brighter Colors for Dark Mode
-            fig_weight = plot_trend(df, 'Visit Date', 'Weight (kg)', 'Weight Trajectory', '#00d2d3', 'Weight (kg)') # Bright Cyan
+            weight_color = '#00d2d3' if st.session_state.theme == 'dark' else '#2980b9'
+            fig_weight = plot_trend(df, 'Visit Date', 'Weight (kg)', 'Weight Trajectory', weight_color, 'Weight (kg)')
             st.pyplot(fig_weight)
 
             # Row 2: WHZ (Full Width)
             st.markdown("####") # Spacer
-
-            # Row 2: WHZ (Full Width or Centered)
-            st.markdown("####") # Spacer
-            fig_whz = plot_trend(df, 'Visit Date', 'WHZ', 'WHZ Score Trajectory', '#ff9f43', 'Z-Score') # Bright Orange
+            whz_color = '#ff9f43' if st.session_state.theme == 'dark' else '#f39c12'
+            fig_whz = plot_trend(df, 'Visit Date', 'WHZ', 'WHZ Score Trajectory', whz_color, 'Z-Score')
             st.pyplot(fig_whz)
             
 
