@@ -502,6 +502,9 @@ else:
                 'sanitation_access': sanitation_access
             }])
             
+            # Clinical Calcs (Current)
+            z_score, whz_category = calculate_whz(current_height, current_weight, gender)
+
             # Prediction
             try:
                 prob = model.predict_proba(input_vector)[0][1]
@@ -512,9 +515,72 @@ else:
                 prob, ml_risk, ml_class = 0, "Error", "status-neutral"
                 st.error(f"Prediction Error: {e}")
 
-            # Clinical Calcs (Current)
-            # bmi_proxy removed as per user request
-            z_score, whz_category = calculate_whz(current_height, current_weight, gender)
+            # Pre-calculate risk factors for explanation
+            risk_factors = []
+            contributing_factors = []
+            
+            if z_score is not None:
+                if z_score <= -3:
+                    risk_factors.append("Severe Wasting (WHZ <= -3 SD)")
+                    contributing_factors.append("Critically low Weight-for-Height Z-Score")
+                elif -3 < z_score <= -2:
+                    risk_factors.append("Moderate Wasting (-3 < WHZ <= -2 SD)")
+                    contributing_factors.append("Low Weight-for-Height Z-Score")
+            
+            if weight_change < 0:
+                risk_factors.append(f"Recent Weight Loss (-{abs(weight_change):.2f}kg)")
+                contributing_factors.append("Recent weight loss trend")
+            elif illness_count_roll > 0:
+                contributing_factors.append("Recent illness history")
+                
+            if immunization_status == 'zero_dose':
+                 risk_factors.append("❌ Zero Dose: Immediate Vaccination Referral Required")
+                 contributing_factors.append("Zero dose immunization status")
+            elif immunization_status == 'partially_immunized':
+                 risk_factors.append("⚠️ Partially Immunized: Refer for Catch-up Counseling")
+                 contributing_factors.append("Partial immunization")
+            
+            if hiv_exposure == 'hiv_infected':
+                risk_factors.append("❌ HIV Infected: High Risk - Immediate Clinical Management Required")
+                contributing_factors.append("HIV Infected status")
+            elif hiv_exposure == 'hiv_exposed_unaffected':
+                risk_factors.append("⚠️ HIV Exposed Unaffected: Moderate Risk - Monitor Growth Closely")
+                contributing_factors.append("HIV Exposed status")
+            elif hiv_exposure == 'unknown':
+                 risk_factors.append("⚠️ HIV Status Unknown: Recommend Testing if indicated")
+
+            if ebf_duration < 2:
+                risk_factors.append(f"❌ High Risk: Exclusive Breastfeeding stopped too early (< 2 months)")
+                contributing_factors.append("Suboptimal exclusive breastfeeding duration")
+            elif 2 <= ebf_duration <= 5:
+                risk_factors.append(f"⚠️ Moderate Risk: Exclusive Breastfeeding stopped early (2-5 months)")
+                contributing_factors.append("Early cessation of exclusive breastfeeding")
+            
+            if current_age >= 6 and feeding_diversity < 4:
+                risk_factors.append("Low Dietary Diversity (< 4 groups)")
+                contributing_factors.append("Low feeding diversity score")
+            
+            if water_access == 'no' or sanitation_access == 'no':
+                risk_factors.append("Poor WASH conditions (Infection Risk)")
+                contributing_factors.append("Limited access to clean water/sanitation")
+
+            if ses_category_label == "Low SES":
+                risk_factors.append(f"Low Socio-Economic Status (Score: {ses_score_total}/13): High Malnutrition Risk")
+                contributing_factors.append("Lower socio-economic factors")
+
+            if len(contributing_factors) == 0:
+                contributing_factors.append("No major specific risk factors identified; percentage reflects baseline demographic/growth patterns.")
+
+            if not risk_factors:
+                rec_text = "✅ Child is growing well. Maintain healthy feeding practices."
+                rec_class = "rec-success"
+            else:
+                rec_text = "⚠️ **CRITICAL FINDINGS:**<br>" + "<br>".join([f"- {factor}" for factor in risk_factors])
+                if ((z_score is not None and z_score < -2) or ml_risk == "High Risk"):
+                    rec_text += "<br><br><b>ACTION: Immediate clinical assessment and referral required.</b>"
+                else:
+                    rec_text += "<br><br><b>ACTION: Close monitoring and active nutritional support advised.</b>"
+                rec_class = "rec-critical" if ((z_score is not None and z_score <= -3) or ml_risk == "High Risk") else "rec-warning"
             
             # Display Grid
             r1_col1, r1_col2 = st.columns(2)
@@ -524,6 +590,8 @@ else:
                 elif prob < 0.7: bar_color = "#f39c12" # Orange
                 else: bar_color = "#e74c3c" # Red
                 
+                contrib_html = "".join([f"<li style='color: #dcdde1; font-size: 0.85rem; margin-bottom: 3px;'>{cf}</li>" for cf in contributing_factors])
+
                 st.markdown(f"""
                 <div class="metric-container">
                     <p class="label-text">🤖 Trend Prediction</p>
@@ -532,7 +600,15 @@ else:
                     <div class="progress-bar-container">
                         <div class="progress-bar-fill" style="width: {prob*100}%; background-color: {bar_color};"></div>
                     </div>
+                    <div style="margin-top: 15px; text-align: left; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; border-left: 3px solid #3498db;">
+                        <p style="color: #b0b0b0; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px;">Key Risk Factors Influencing This Score:</p>
+                        <ul style="padding-left: 20px; margin-bottom: 0;">
+                            {contrib_html}
+                        </ul>
+                    </div>
                 </div>""", unsafe_allow_html=True)
+                
+                st.markdown(f"""<div class="rec-box {rec_class}" style="margin-top: 10px; padding: 15px;"><p style="font-size: 1.0rem; margin-bottom: 0;"><b>Clinical Recommendation based on Risk Factors:</b><br><br>{rec_text}</p></div>""", unsafe_allow_html=True)
             with r1_col2:
                 # Z-score display logic
                 # whz_category already contains "Severe Wasting" or "Moderate Wasting" or "Normal"
@@ -627,77 +703,6 @@ else:
             fig_whz = plot_trend(df, 'Visit Date', 'WHZ', 'WHZ Score Trajectory', '#ff9f43', 'Z-Score') # Bright Orange
             st.pyplot(fig_whz)
             
-            # Recommendations
-            st.markdown("### 🩺 Clinical Recommendations")
-            
-            risk_factors = []
-            
-            # 1. Check WHZ (Primary Indicator now)
-            # 1. Check WHZ (Primary Indicator now)
-            if z_score is not None:
-                if z_score <= -3:
-                    risk_factors.append("Severe Wasting (WHZ <= -3 SD)")
-                elif -3 < z_score <= -2:
-                    risk_factors.append("Moderate Wasting (-3 < WHZ <= -2 SD)")
-            
-            # 2. Check Weight Loss Trend
-            
-            # 3. Check Weight Loss Trend
-            if weight_change < 0:
-                risk_factors.append(f"Recent Weight Loss (-{abs(weight_change):.2f}kg)")
-                
-            # 4. Check ML Prediction
-            # 4. Check ML Prediction
-            if ml_risk == "High Risk":
-                risk_factors.append("ML Model predicts High Risk (Multifactorial)")
-            
-            # 5. Check New Risk Factors
-            if immunization_status == 'zero_dose':
-                 risk_factors.append("❌ Zero Dose: Immediate Vaccination Referral Required")
-            elif immunization_status == 'partially_immunized':
-                 risk_factors.append("⚠️ Partially Immunized: Refer for Catch-up Counseling")
-            
-            # HIV Risk
-            if hiv_exposure == 'hiv_infected':
-                risk_factors.append("❌ HIV Infected: High Risk - Immediate Clinical Management Required")
-            elif hiv_exposure == 'hiv_exposed_unaffected':
-                risk_factors.append("⚠️ HIV Exposed Unaffected: Moderate Risk - Monitor Growth Closely")
-            elif hiv_exposure == 'unknown':
-                 risk_factors.append("⚠️ HIV Status Unknown: Recommend Testing if indicated")
 
-            # Breastfeeding Risk Logic
-            if ebf_duration < 2:
-                risk_factors.append(f"❌ High Risk: Exclusive Breastfeeding stopped too early (< 2 months)")
-            elif 2 <= ebf_duration <= 5:
-                risk_factors.append(f"⚠️ Moderate Risk: Exclusive Breastfeeding stopped early (2-5 months)")
-            elif ebf_duration == 6:
-                pass # Low Risk / Standard
-            elif ebf_duration >= 6:
-                pass # User Note: Exclusive breastfeeding was done (Optimal)
-
-            # Only check diversity if child is of complementary feeding age (>= 6 months)
-            if current_age >= 6 and feeding_diversity < 4:
-                risk_factors.append("Low Dietary Diversity (< 4 groups)")
-            
-            if water_access == 'no':
-                risk_factors.append("No Access to Clean Water (Risk of Infection)")
-
-            # SES Risk
-            if ses_category_label == "Low SES":
-                risk_factors.append(f"Low Socio-Economic Status (Score: {ses_score_total}/12): High Malnutrition Risk")
-            elif ses_category_label == "Middle SES":
-                 risk_factors.append(f"Middle Socio-Economic Status (Score: {ses_score_total}/12): Moderate Risk")
-
-            # Construct Message
-            if not risk_factors:
-                rec_text = "✅ Child is growing well. Maintain healthy feeding practices."
-                rec_class = "rec-success"
-            else:
-                rec_text = "⚠️ **CRITICAL FINDINGS:**<br>" + "<br>".join([f"- {factor}" for factor in risk_factors])
-                rec_text += "<br><br><b>ACTION: Immediate clinical assessment and referral required.</b>"
-                rec_class = "rec-critical" if ((z_score is not None and z_score < -3) or ml_risk == "High Risk") else "rec-warning"
-
-            st.markdown(f"""<div class="rec-box {rec_class}"><p style="font-size: 1.1rem; margin-bottom: 0;">{rec_text}</p></div>""", unsafe_allow_html=True)
-            
         else:
             st.info("👈 Please enter the last 5 session records in the table to analyze.")
