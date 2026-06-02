@@ -50,17 +50,26 @@ def calculate_whz(height, weight, gender):
     except:
         return None, "Calc Error"
         
-    # Classification Rules from JSON Spec
-    # severe_wasting: whz <= -3
-    # moderate_wasting: -3 < whz <= -2
-    # normal: whz > -2
-    
-    if z_score <= -3: 
-        category = "Severe Wasting"
-    elif -3 < z_score <= -2: 
-        category = "Moderate Wasting"
-    else: 
+    # WHO Classification Rules (0–5 years)
+    # < -3 SD : Severely Wasted
+    # < -2 SD : Wasted (Moderately)
+    # >-2 and <+1 SD : Normal
+    # > +1 SD : At Risk of Overweight
+    # > +2 SD : Overweight
+    # > +3 SD : Obese
+
+    if z_score < -3:
+        category = "Severely Wasted"
+    elif z_score < -2:
+        category = "Wasted"
+    elif z_score <= 1:
         category = "Normal"
+    elif z_score <= 2:
+        category = "At Risk of Overweight"
+    elif z_score <= 3:
+        category = "Overweight"
+    else:
+        category = "Obese"
 
     return round(z_score, 2), category
 
@@ -263,7 +272,7 @@ else:
         
         # Sections for better organization (Single Page View)
         
-        with st.expander("1. 📏 Growth Metrics (Current & History)", expanded=True):
+        with st.expander("1. 📏 Growth Metrics (Current)", expanded=True):
             c1, c2 = st.columns(2)
             with c1: gender = st.selectbox("Gender", ["Male", "Female"])
             with c2: current_age = st.number_input("Age (months)", 0, 60, 24)
@@ -271,29 +280,13 @@ else:
             c3, c4 = st.columns(2)
             # Validation Rule: Weight [2, 30]
             with c3: birth_weight = st.number_input("Birth Weight (kg)", 0.5, 6.0, 3.0, step=0.1)
-            with c4: st.write("") # Spacer
+            with c4: illness_count_last_month = st.number_input("Illnesses in Last Month", 0, 10, 0)
 
-            st.markdown("<b>Longitudinal Data (Last 5 Visits):</b>", unsafe_allow_html=True)
-            # Default Data for Editor
-            default_data = pd.DataFrame({
-                'Visit Date': [pd.Timestamp('2023-01-01'), pd.Timestamp('2023-02-01'), pd.Timestamp('2023-03-01'), pd.Timestamp('2023-04-01'), pd.Timestamp('2023-05-01')],
-                'Weight (kg)': [9.0, 9.2, 9.1, 9.3, 9.5],
-                'Height (cm)': [75.0, 75.5, 76.0, 76.5, 77.0],
-                'Illness (Yes/No)': [False, False, True, False, False]
-            })
-            
-            # Validation Rules: Height [45, 120], Weight [2, 30]
-            edited_df = st.data_editor(
-                default_data, 
-                num_rows="dynamic", 
-                column_config={
-                    "Visit Date": st.column_config.DateColumn("Visit Date", format="YYYY-MM-DD"),
-                    "Weight (kg)": st.column_config.NumberColumn("Weight", min_value=2, max_value=30, step=0.1),
-                    "Height (cm)": st.column_config.NumberColumn("Height", min_value=45, max_value=120, step=0.1),
-                    "Illness (Yes/No)": st.column_config.CheckboxColumn("Illness?", help="Was child ill at visit?")
-                },
-                width="stretch"
-            )
+            st.markdown("<b>Current Measurements:</b>", unsafe_allow_html=True)
+            c5, c6, c7 = st.columns(3)
+            with c5: current_weight = st.number_input("Current Weight (kg)", min_value=2.0, max_value=30.0, value=9.5, step=0.1)
+            with c6: current_height = st.number_input("Current Height (cm)", min_value=45.0, max_value=120.0, value=75.0, step=0.1)
+            with c7: muac_mm = st.number_input("MUAC (mm)", min_value=80, max_value=200, value=135, step=1)
 
         with st.expander("2. 💊 Health & Clinical History", expanded=True):
             col_a, col_b = st.columns(2)
@@ -463,72 +456,59 @@ else:
     with right_col:
         st.subheader("📊 Clinical Assessment Results")
         
-        if predict_btn and not edited_df.empty:
-            # Process Data
-            df = pd.DataFrame(edited_df)
-            df['Visit Date'] = pd.to_datetime(df['Visit Date'], errors='coerce')
-            df = df.sort_values(by='Visit Date')
-            
-            # --- Feature Engineering for Model ---
-            # Calculate WHZ for all rows first
-            whz_scores = []
-            for index, row in df.iterrows():
-                z, cat = calculate_whz(row['Height (cm)'], row['Weight (kg)'], gender)
-                whz_scores.append(z if z is not None else 0)
-            df['WHZ'] = whz_scores
-
-            # Current values (Latest row)
-            latest = df.iloc[-1]
-            prev = df.iloc[-2] if len(df) > 1 else latest # Fallback if only 1 row
-            
-            current_weight = latest['Weight (kg)']
-            current_height = latest['Height (cm)']
-            current_whz = latest['WHZ']
-            
-            # Derived Features (Lag/Roll)
-            weight_change = current_weight - prev['Weight (kg)'] if len(df) > 1 else 0
-            whz_change = current_whz - prev['WHZ'] if len(df) > 1 else 0
-            illness_count_roll = df['Illness (Yes/No)'].sum() # Simple sum of checked boxes
+        if predict_btn:
+            # Clinical Calcs (Current)
+            current_whz, whz_category = calculate_whz(current_height, current_weight, gender)
+            z_score = current_whz
 
             # Input Vector for Model
-            # Needs to match the training data columns (minus the dropped ones)
-            # The pipeline handles encoding, so we pass raw values.
-            
             input_vector = pd.DataFrame([{
+                'age_months': current_age,
                 'weight': current_weight,
                 'height': current_height,
-                'WHZ': current_whz,
+                'muac_mm': muac_mm,
                 'gender': gender,
                 'birth_weight': birth_weight,
-                'weight_change': weight_change,
-                'whz_change': whz_change,
-                'illness_count_roll': illness_count_roll,
-                'illness_count_last_month': illness_count_roll, # Proxying from longitudinal data for now
-                'immunization_status': immunization_status,
+                'household_income_level': income_level,
+                'parent_education_level': education_level,
+                'access_to_clean_water': water_access,
+                'sanitation_access': sanitation_access,
                 'hiv_exposure': hiv_exposure,
                 'chronic_illness': chronic_illness,
                 'congenital_disease': congenital_disease,
                 'recurrent_diarrhea': recurrent_diarrhea,
                 'exclusive_breastfeeding_6m': breastfeeding_6m,
-                'feeding_diversity_score': feeding_diversity,
-                'meal_frequency_per_day': meal_freq,
-                'household_income_level': income_level,
-                'parent_education_level': education_level,
-                'access_to_clean_water': water_access,
-                'sanitation_access': sanitation_access
+                'immunization_status': immunization_status,
+                'feeding_practice': "Mixed Feeding" if feeding_diversity > 3 else "Complementary Feeding" if current_age >= 6 else "Exclusive Breastfeeding",
+                'recent_illness': "no" if illness_count_last_month == 0 else "Fever",
             }])
-            
-            # Clinical Calcs (Current)
-            z_score, whz_category = calculate_whz(current_height, current_weight, gender)
 
-            # Prediction
+            # Prediction (Multi-class)
             try:
-                prob = model.predict_proba(input_vector)[0][1]
-                if prob < 0.3: ml_risk, ml_class = "Low Risk", "status-normal"
-                elif prob < 0.7: ml_risk, ml_class = "Moderate Risk", "status-warning"
-                else: ml_risk, ml_class = "High Risk", "status-danger"
+                # The model now outputs 5 classes instead of a binary probability
+                predicted_class = model.predict(input_vector)[0]
+                probabilities = model.predict_proba(input_vector)[0]
+                classes = model.classes_
+                prob = probabilities[list(classes).index(predicted_class)]
+                
+                ml_risk = predicted_class
+                
+                # Determine styling based on class
+                if "Severe" in ml_risk:
+                    ml_class = "status-danger"
+                    bar_color = "#e74c3c" # Red
+                elif "Moderate Malnutrition" in ml_risk or "High Risk" in ml_risk:
+                    ml_class = "status-warning"
+                    bar_color = "#f39c12" # Orange
+                elif "Moderate Risk" in ml_risk:
+                    ml_class = "status-warning"
+                    bar_color = "#f1c40f" # Yellow
+                else:
+                    ml_class = "status-normal"
+                    bar_color = "#2ecc71" # Green
+                    
             except Exception as e:
-                prob, ml_risk, ml_class = 0, "Error", "status-neutral"
+                prob, ml_risk, ml_class, bar_color = 0, "Error", "status-neutral", "#95a5a6"
                 st.error(f"Prediction Error: {e}")
 
             # Pre-calculate risk factors for explanation
@@ -536,18 +516,24 @@ else:
             contributing_factors = []
             
             if z_score is not None:
-                if z_score <= -3:
-                    risk_factors.append("Severe Wasting (WHZ <= -3 SD)")
+                if z_score < -3:
+                    risk_factors.append("Severely Wasted (WHZ < -3 SD)")
                     contributing_factors.append("Critically low Weight-for-Height Z-Score")
-                elif -3 < z_score <= -2:
-                    risk_factors.append("Moderate Wasting (-3 < WHZ <= -2 SD)")
+                elif z_score < -2:
+                    risk_factors.append("Wasted (Moderately) (-3 ≤ WHZ < -2 SD)")
                     contributing_factors.append("Low Weight-for-Height Z-Score")
+                elif z_score > 1:
+                    risk_factors.append("At Risk of Overweight (WHZ > +1 SD)")
+                    contributing_factors.append("Elevated Weight-for-Height Z-Score")
+                    if z_score > 2:
+                        risk_factors[-1] = "Overweight (WHZ > +2 SD)"
+                    if z_score > 3:
+                        risk_factors[-1] = "Obese (WHZ > +3 SD)"
             
-            if weight_change < 0:
-                risk_factors.append(f"Recent Weight Loss (-{abs(weight_change):.2f}kg)")
-                contributing_factors.append("Recent weight loss trend")
-            elif illness_count_roll > 0:
-                contributing_factors.append("Recent illness history")
+            if illness_count_last_month > 0:
+                contributing_factors.append(f"Recent illness history ({illness_count_last_month} in last month)")
+                if illness_count_last_month >= 3:
+                     risk_factors.append("High frequency of recent illnesses")
                 
             if immunization_status == 'zero_dose':
                  risk_factors.append("❌ Zero Dose: Immediate Vaccination Referral Required")
@@ -601,39 +587,30 @@ else:
             # Display Grid
             r1_col1, r1_col2 = st.columns(2)
             with r1_col1:
-                # Progress Bar Color Logic
-                if prob < 0.3: bar_color = "#2ecc71" # Green
-                elif prob < 0.7: bar_color = "#f39c12" # Orange
-                else: bar_color = "#e74c3c" # Red
-                
                 contrib_html = "".join([f"<li style='color: var(--text-color); font-size: 0.85rem; margin-bottom: 3px;'>{cf}</li>" for cf in contributing_factors])
 
                 st.markdown(f"""
                 <div class="metric-container">
                     <p class="label-text">🤖 Trend Prediction</p>
                     <div class="status-badge {ml_class}">{ml_risk}</div>
-                    <p style="margin-top: 15px; color: var(--text-muted); font-size: 0.9rem;">Probability: <b style="color: var(--text-color); font-size: 1.2rem; font-weight: 800;">{prob:.1%}</b></p>
+                    <p style="margin-top: 15px; color: var(--text-muted); font-size: 0.9rem;">Confidence: <b style="color: var(--text-color); font-size: 1.2rem; font-weight: 800;">{prob:.1%}</b></p>
                     <div class="progress-bar-container">
                         <div class="progress-bar-fill" style="width: {prob*100}%; background-color: {bar_color};"></div>
-                    </div>
-                    <div style="margin-top: 15px; text-align: left; background: rgba(0,0,0,0.1); padding: 10px; border-radius: 8px; border-left: 3px solid #3498db;">
-                        <p style="color: var(--text-muted); font-size: 0.85rem; font-weight: bold; margin-bottom: 5px;">Key Risk Factors Influencing This Score:</p>
-                        <ul style="padding-left: 20px; margin-bottom: 0;">
-                            {contrib_html}
-                        </ul>
                     </div>
                 </div>""", unsafe_allow_html=True)
                 
                 st.markdown(f"""<div class="rec-box {rec_class}" style="margin-top: 10px; padding: 15px;"><p style="font-size: 1.0rem; margin-bottom: 0;"><b>Clinical Recommendation based on Risk Factors:</b><br><br>{rec_text}</p></div>""", unsafe_allow_html=True)
             with r1_col2:
                 # Z-score display logic
-                # whz_category already contains "Severe Wasting" or "Moderate Wasting" or "Normal"
-                
-                whz_risk_class = "status-normal"
-                if whz_category == "Severe Wasting":
+                # Badge color based on WHO category
+                if whz_category == "Severely Wasted":
                     whz_risk_class = "status-danger"
-                elif whz_category == "Moderate Wasting":
+                elif whz_category in ("Wasted", "At Risk of Overweight", "Overweight"):
                     whz_risk_class = "status-warning"
+                elif whz_category == "Obese":
+                    whz_risk_class = "status-danger"
+                else:
+                    whz_risk_class = "status-normal"
                 
                 whz_val_str = f"{z_score:.2f}" if z_score is not None else "N/A"
                 
@@ -644,84 +621,5 @@ else:
                     <p style="margin-top: 15px; color: var(--text-muted); font-size: 0.9rem;">Value: <b style="color: var(--text-color); font-size: 1.2rem; font-weight: 800;">{whz_val_str} SD</b></p>
                 </div>""", unsafe_allow_html=True)
             
-            # Weight & BMI & WHZ Trend Charts
-            st.markdown("### 📈 Growth Trends")
-            
-            # Calculate BMI and WHZ for all visits
-            df['Height_m'] = df['Height (cm)'] / 100
-            # Drop rows with invalid dates
-            df = df.dropna(subset=['Visit Date'])
-
-            # Calculate WHZ for all rows first (already done above)
-            
-            # --- Remove BMI Calculation ---
-            # df['BMI'] = ... (Removed)
-            
-            # Function to plot with non-overlapping labels
-            def plot_trend(data, x_col, y_col, title, color, y_label):
-                if data.empty: return None
-                
-                is_dark = st.session_state.theme == 'dark'
-                text_color = 'white' if is_dark else '#2c3e50'
-                
-                if is_dark:
-                    plt.style.use('dark_background')
-                else:
-                    plt.style.use('default')
-                
-                fig, ax = plt.subplots(figsize=(6, 4))
-                fig.patch.set_facecolor('none') # Transparent bg
-                ax.set_facecolor('none')      # Transparent plot area
-                
-                # Plot Line and Points
-                ax.plot(data[x_col], data[y_col], marker='o', linestyle='-', color=color, linewidth=2, markersize=8)
-                
-                # Add Data Labels with alternating offset to prevent overlap
-                for i, txt in enumerate(data[y_col]):
-                    if pd.isna(data[y_col].iloc[i]): continue
-                    offset = 15 if i % 2 == 0 else -25  # Alternate up/down
-                    val_str = f"{txt:.1f}"
-                    ax.annotate(val_str, (data[x_col].iloc[i], data[y_col].iloc[i]),
-                                textcoords="offset points", xytext=(0, offset), ha='center',
-                                fontsize=9, fontweight='bold', color=text_color,
-                                arrowprops=dict(arrowstyle="-", color=text_color, alpha=0.5))
-
-                # Formatting
-                ax.set_title(title, fontweight='bold', color=text_color)
-                ax.set_ylabel(y_label, fontweight='bold', color=text_color)
-                ax.set_xlabel('Visit Date', fontweight='bold', color=text_color)
-                ax.grid(True, linestyle='--', alpha=0.3, color=text_color)
-                
-                # Axis Colors
-                ax.tick_params(axis='x', colors=text_color)
-                ax.tick_params(axis='y', colors=text_color)
-                for spine in ax.spines.values():
-                    spine.set_color(text_color)
-                
-                # Rotate Date Labels
-                fig.autofmt_xdate(rotation=45)
-                
-                # Ensure y-axis has some padding for labels
-                if not data[y_col].dropna().empty:
-                    y_min, y_max = data[y_col].min(), data[y_col].max()
-                    margin = (y_max - y_min) * 0.2 if y_max != y_min else 1.0
-                    ax.set_ylim(y_min - margin, y_max + margin)
-                
-                return fig
-
-            # Layout Charts
-            # Row 1: Weight (Full Width)
-            st.markdown("####") 
-            weight_color = '#00d2d3' if st.session_state.theme == 'dark' else '#2980b9'
-            fig_weight = plot_trend(df, 'Visit Date', 'Weight (kg)', 'Weight Trajectory', weight_color, 'Weight (kg)')
-            st.pyplot(fig_weight)
-
-            # Row 2: WHZ (Full Width)
-            st.markdown("####") # Spacer
-            whz_color = '#ff9f43' if st.session_state.theme == 'dark' else '#f39c12'
-            fig_whz = plot_trend(df, 'Visit Date', 'WHZ', 'WHZ Score Trajectory', whz_color, 'Z-Score')
-            st.pyplot(fig_whz)
-            
-
         else:
-            st.info("👈 Please enter the last 5 session records in the table to analyze.")
+            st.info("👈 Please enter the current measurements and click Analyze.")

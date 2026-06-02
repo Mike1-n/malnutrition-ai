@@ -1,0 +1,201 @@
+child_id,age_months,gender,birth_weight,weight,height,muac_mm,recent_illness,chronic_illness,immunization_status,feeding_practice,household_income_level,malnutrition_category
+K001,58,Female,3.28,6.2,72.8,112.1,Pneumonia,yes,fully_immunized,Mixed Feeding,low,Severe Malnutrition
+K002,30,Male,3.31,6.3,83.2,108.0,Gastroenteritis,yes,fully_immunized,Mixed Feeding,low,Severe Malnutrition
+K003,25,Male,3.07,5.8,67.4,105.7,Malaria,yes,fully_immunized,Exclusive Breastfeeding,high,Severe Malnutrition
+K004,37,Male,3.03,5.7,80.2,118.6,nan,yes,zero_dose,Complementary Feeding,low,Severe Malnutrition
+K005,40,Male,3.68,6.1,74.8,105.5,Febrile Illness,yes,fully_immunized,Exclusive Breastfeeding,low,Severe Malnutrition
+K006,20,Female,3.72,6.1,70.1,104.6,nan,yes,fully_immunized,Complementary Feeding,high,Severe Malnutrition
+K007,7,Male,3.54,6.6,78.5,98.9,Malaria,yes,partially_immunized,Complementary Feeding,low,Severe Malnutrition
+K008,53,Male,3.05,7.3,65.9,115.3,Meningitis,yes,partially_immunized,Mixed Feeding,middle,Severe Malnutrition
+K009,25,Female,2.21,5.3,81.1,111.7,nan,yes,fully_immunized,Complementary Feeding,low,Severe Malnutrition
+K010,6,Female,3.08,7.2,67.9,104.3,Measles,yes,fully_immunized,Mixed Feeding,middle,Severe Malnutrition
+K011,13,Female,3.33,7.2,93.2,119.7,Febrile Illness,yes,fully_immunized,Mixed Feeding,middle,Moderate Malnutrition
+K012,30,Male,2.93,7.2,82.7,126.1,nan,yes,fully_immunized,Exclusive Breastfeeding,low,Moderate Malnutrition
+K013,15,Male,3.15,8.3,82.9,123.1,Gastroenteritis,yes,fully_immunized,Mixed Feeding,middle,Moderate Malnutrition
+K014,35,Male,2.75,7.1,83.8,121.1,nan,yes,fully_immunized,Mixed Feeding,high,Moderate Malnutrition
+K015,15,Female,3.76,7.2,79.1,116.6,nan,yes,zero_dose,Complementary Feeding,middle,Moderate Malnutrition
+K016,21,Male,3.05,7.0,82.1,121.7,nan,yes,fully_immunized,Complementary Feeding,middle,Moderate Malnutrition
+K017,33,Female,3.12,7.6,94.7,124.1,nan,yes,partially_immunized,Complementary Feeding,high,Moderate Malnutrition
+K018,47,Male,3.07,8.3,81.6,126.9,Febrile Illness,yes,fully_immunized,Complementary Feeding,low,Moderate Malnutrition
+K019,26,Male,2.45,7.8,79.6,119.1,nan,yes,partially_immunized,Mixed Feeding,low,Moderate Malnutrition
+K020,21,Female,3.25,8.2,89.4,125.4,nan,yes,zero_dose,Exclusive Breastfeeding,middle,Moderate Malnutrition
+K021,29,Female,2.78,8.1,87.6,129.6,nan,yes,fully_immunized,Complementary Feeding,middle,Moderate Malnutrition
+K022,17,Male,3.32,7.3,85.9,122.5,Febrile Illness,yes,fully_immunized,Exclusive Breastfeeding,middle,Moderate Malnutrition
+K023,27,Male,2.09,9.2,88.1,128.8,Pneumonia,yes,fully_immunized,Exclusive Breastfeeding,high,Moderate Malnutrition
+K024,58,Female,2.63,7.6,92.4,135.2,nan,yes,fully_immunized,Complementary Feeding,low,Moderate Malnutrition
+K025,26,Female,2.02,8.4,82.0,117.6,nan,yes,partially_immunized,Complementary Feeding,low,Moderate Malnutrition
+K026,20,Male,2.87,9.3,80.5,116.8,nan,yes,fully_immunized,Mixed Feeding,low,Moderate Malnutrition
+K027,35,Female,3.21,7.1,80.4,124.9,nan,yes,fully_immunized,Mixed Feeding,middle,Moderate Malnutrition
+K028,21,Female,2.77,8.1,82.4,121.2,nan,yes,fully_immunized,Complementary Feeding,high,Moderate Malnutrition
+K029,35,Male,3.41,7.6,81.1,123.6,nan,yes,fully_immunized,Complementary Feeding,low,Moderate Malnutrition
+K030,16,Male,2.68,7.6,89.8,126.4,Pneumonia,yes,fully_immunized,Complementary Feeding,high,Moderate Malnutrition
+K031,8,Female,3.13,8.1,84.9,122.8,Pneumonia,yes,fully_immunized,Exclusive Breastfeeding,low,Moderate Malnutrition
+K032,38,Male,3.6,7.1,94.2,120.8,nan,yes,partially_immunized,Mixed Feeding,middle,Moderate Malnutrition
+K033,45,Male,3.09,9.1,91.7,126.5,Malaria,yes,zero_dose,Complementary Feeding,low,Moderate Malnutrition
+K034,42,Female,1.97,9.3,85.0,125.3,Pneumonia,yes,fully_immunized,Complementary Feeding,high,Moderate Malnutrition
+K035,27,Male,3.35,7.4,83.8,125.2,nan,yes,fully_immunized,Mixed Feeding,middle,Moderate Malnutrition
+K036,33,Male,2.43,8.1,81.0,124.0,Pneumonia,yes,fully_immunized,Exclusive Breastfeeding,low,Moderate Malnutrition
+K037,9,Male,2.15,7.5,87.5,121.9,nan,yes,fully_immunized,Complementary Feeding,middle,Moderate Malnutrition
+K038,42,Female,2.75,7.6,82.1,128.2,nan,yes,fully_immunized,Mixed Feeding,low,Moderate Malnutrition
+K039,54,Male,2.69,8.3,76.4,134.6,nan,yes,fully_immunized,Mixed Feeding,high,Moderate Malnutrition
+K040,30,Male,3.28,8.4,94.0,125.3,nan,yes,fully_immunized,Exclusive Breastfeeding,low,Moderate Malnutrition
+K041,32,Female,2.68,12.5,75.6,132.5,Pneumonia,yes,zero_dose,Exclusive Breastfeeding,low,Not Malnourished - High Risk
+K042,44,Female,2.52,16.8,81.2,132.8,Malaria,yes,fully_immunized,Complementary Feeding,high,Not Malnourished - High Risk
+K043,46,Female,3.49,12.2,104.1,129.3,Pneumonia,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - High Risk
+K044,38,Male,3.1,9.8,96.5,137.0,nan,yes,partially_immunized,Exclusive Breastfeeding,high,Not Malnourished - High Risk
+K045,55,Male,3.07,11.0,102.5,138.3,nan,yes,fully_immunized,Complementary Feeding,high,Not Malnourished - High Risk
+K046,39,Female,3.26,12.7,90.0,132.3,Pneumonia,yes,fully_immunized,Complementary Feeding,middle,Not Malnourished - High Risk
+K047,31,Male,2.99,16.5,81.7,131.0,Gastroenteritis,yes,fully_immunized,Exclusive Breastfeeding,low,Not Malnourished - High Risk
+K048,20,Female,2.97,13.4,107.5,128.2,nan,yes,fully_immunized,Complementary Feeding,middle,Not Malnourished - High Risk
+K049,38,Female,3.08,17.0,99.9,138.2,Gastroenteritis,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - High Risk
+K050,38,Female,3.07,14.7,96.6,139.5,Measles,yes,zero_dose,Mixed Feeding,low,Not Malnourished - High Risk
+K051,18,Female,3.18,15.2,88.0,136.3,nan,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - High Risk
+K052,59,Male,2.35,12.6,99.6,140.6,nan,yes,fully_immunized,Complementary Feeding,low,Not Malnourished - High Risk
+K053,14,Male,3.2,11.9,110.0,128.6,Meningitis,yes,zero_dose,Mixed Feeding,low,Not Malnourished - High Risk
+K054,40,Female,3.17,13.2,84.2,133.3,Febrile Illness,yes,fully_immunized,Complementary Feeding,middle,Not Malnourished - High Risk
+K055,23,Female,2.63,14.5,111.0,127.1,Pneumonia,yes,fully_immunized,Complementary Feeding,low,Not Malnourished - High Risk
+K056,18,Male,2.33,13.1,78.9,130.2,Gastroenteritis,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - High Risk
+K057,44,Male,3.06,16.1,103.8,134.2,Pneumonia,yes,zero_dose,Exclusive Breastfeeding,low,Not Malnourished - High Risk
+K058,21,Male,3.45,12.7,89.1,130.0,Gastroenteritis,yes,fully_immunized,Complementary Feeding,low,Not Malnourished - High Risk
+K059,40,Male,3.86,13.7,94.2,132.4,Febrile Illness,yes,fully_immunized,Complementary Feeding,low,Not Malnourished - High Risk
+K060,19,Male,2.44,16.3,111.1,137.5,Pneumonia,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - High Risk
+K061,15,Male,3.1,9.2,95.1,133.2,nan,yes,fully_immunized,Mixed Feeding,high,Not Malnourished - High Risk
+K062,32,Male,3.06,10.8,93.3,128.0,nan,yes,fully_immunized,Exclusive Breastfeeding,high,Not Malnourished - High Risk
+K063,10,Female,4.3,16.4,106.1,128.6,Measles,yes,fully_immunized,Exclusive Breastfeeding,middle,Not Malnourished - High Risk
+K064,11,Male,2.91,9.2,92.3,128.8,Measles,yes,fully_immunized,Exclusive Breastfeeding,low,Not Malnourished - High Risk
+K065,27,Female,3.02,11.7,76.0,131.0,Pneumonia,yes,fully_immunized,Exclusive Breastfeeding,high,Not Malnourished - High Risk
+K066,10,Male,3.69,11.0,85.0,127.5,nan,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - High Risk
+K067,28,Male,2.92,9.8,92.8,131.4,nan,yes,fully_immunized,Complementary Feeding,low,Not Malnourished - High Risk
+K068,55,Female,2.76,8.6,107.2,135.6,Gastroenteritis,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - High Risk
+K069,36,Male,3.43,16.7,79.4,133.1,nan,yes,fully_immunized,Exclusive Breastfeeding,middle,Not Malnourished - High Risk
+K070,52,Female,3.26,15.7,104.9,140.0,nan,yes,fully_immunized,Complementary Feeding,high,Not Malnourished - High Risk
+K071,37,Female,2.75,9.2,83.1,136.9,nan,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - High Risk
+K072,37,Male,3.1,16.9,88.1,137.9,Pneumonia,yes,fully_immunized,Complementary Feeding,low,Not Malnourished - High Risk
+K073,58,Male,2.46,16.3,105.2,134.0,nan,yes,fully_immunized,Exclusive Breastfeeding,low,Not Malnourished - High Risk
+K074,20,Male,2.68,12.1,87.4,131.8,Gastroenteritis,yes,partially_immunized,Complementary Feeding,middle,Not Malnourished - High Risk
+K075,49,Male,3.85,13.2,87.7,137.7,Malaria,yes,zero_dose,Exclusive Breastfeeding,middle,Not Malnourished - High Risk
+K076,37,Female,2.17,8.8,109.0,133.5,Gastroenteritis,yes,partially_immunized,Complementary Feeding,low,Not Malnourished - High Risk
+K077,46,Male,3.41,13.6,95.3,137.4,nan,yes,fully_immunized,Complementary Feeding,low,Not Malnourished - High Risk
+K078,45,Male,2.4,12.2,84.7,130.5,nan,yes,fully_immunized,Exclusive Breastfeeding,low,Not Malnourished - High Risk
+K079,12,Female,3.25,14.4,99.5,132.7,Febrile Illness,yes,fully_immunized,Mixed Feeding,middle,Not Malnourished - High Risk
+K080,57,Female,3.08,9.5,102.5,134.9,nan,yes,partially_immunized,Mixed Feeding,high,Not Malnourished - High Risk
+K081,24,Male,3.63,15.4,103.5,130.2,nan,yes,fully_immunized,Exclusive Breastfeeding,high,Not Malnourished - High Risk
+K082,13,Male,2.46,9.8,90.7,132.5,nan,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - High Risk
+K083,53,Male,2.75,12.9,105.8,142.1,nan,yes,fully_immunized,Exclusive Breastfeeding,low,Not Malnourished - High Risk
+K084,14,Female,2.46,14.4,91.8,135.1,Malaria,yes,fully_immunized,Complementary Feeding,high,Not Malnourished - High Risk
+K085,41,Male,3.1,9.2,78.4,128.8,Malaria,yes,partially_immunized,Exclusive Breastfeeding,middle,Not Malnourished - High Risk
+K086,56,Male,4.01,12.7,89.0,139.4,Pneumonia,yes,partially_immunized,Complementary Feeding,high,Not Malnourished - High Risk
+K087,7,Female,3.09,14.1,105.9,132.1,Malaria,yes,fully_immunized,Exclusive Breastfeeding,high,Not Malnourished - High Risk
+K088,48,Male,2.47,10.8,81.8,136.5,Malaria,yes,fully_immunized,Complementary Feeding,middle,Not Malnourished - High Risk
+K089,31,Female,2.85,15.0,102.0,131.7,Malaria,yes,fully_immunized,Mixed Feeding,middle,Not Malnourished - High Risk
+K090,34,Male,2.83,16.0,85.4,132.8,nan,yes,fully_immunized,Complementary Feeding,low,Not Malnourished - High Risk
+K091,43,Male,2.87,14.4,83.1,140.3,nan,yes,fully_immunized,Exclusive Breastfeeding,middle,Not Malnourished - Moderate Risk
+K092,56,Male,3.23,16.8,75.7,143.1,nan,yes,fully_immunized,Complementary Feeding,middle,Not Malnourished - Moderate Risk
+K093,31,Male,2.57,11.6,97.7,143.6,nan,yes,partially_immunized,Mixed Feeding,middle,Not Malnourished - Moderate Risk
+K094,34,Male,1.9,15.1,82.8,136.9,nan,yes,fully_immunized,Complementary Feeding,low,Not Malnourished - Moderate Risk
+K095,11,Female,2.27,12.3,85.8,138.0,Pneumonia,yes,partially_immunized,Complementary Feeding,middle,Not Malnourished - Moderate Risk
+K096,44,Female,3.35,11.2,108.9,148.4,nan,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - Moderate Risk
+K097,46,Male,3.31,13.3,91.4,142.1,nan,yes,partially_immunized,Complementary Feeding,low,Not Malnourished - Moderate Risk
+K098,41,Male,2.54,13.8,94.3,141.8,Pneumonia,yes,fully_immunized,Mixed Feeding,middle,Not Malnourished - Moderate Risk
+K099,45,Female,3.69,12.4,98.9,143.6,nan,yes,partially_immunized,Complementary Feeding,low,Not Malnourished - Moderate Risk
+K100,51,Female,3.26,16.7,102.5,144.3,nan,yes,fully_immunized,Complementary Feeding,high,Not Malnourished - Moderate Risk
+K101,50,Female,3.25,10.1,83.1,152.7,Gastroenteritis,yes,partially_immunized,Exclusive Breastfeeding,high,Not Malnourished - Moderate Risk
+K102,40,Male,3.54,15.5,95.3,142.3,nan,yes,fully_immunized,Exclusive Breastfeeding,high,Not Malnourished - Moderate Risk
+K103,17,Male,4.03,10.6,95.1,133.8,nan,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - Moderate Risk
+K104,41,Male,2.93,14.1,87.2,141.4,Gastroenteritis,yes,partially_immunized,Complementary Feeding,low,Not Malnourished - Moderate Risk
+K105,17,Female,2.66,14.7,99.6,139.0,nan,yes,fully_immunized,Exclusive Breastfeeding,high,Not Malnourished - Moderate Risk
+K106,35,Male,3.11,12.5,87.4,146.5,nan,yes,fully_immunized,Complementary Feeding,middle,Not Malnourished - Moderate Risk
+K107,55,Male,3.01,12.9,88.6,146.8,Gastroenteritis,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - Moderate Risk
+K108,52,Male,2.56,15.0,105.8,145.3,nan,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - Moderate Risk
+K109,49,Male,3.42,12.8,89.9,143.8,nan,yes,fully_immunized,Exclusive Breastfeeding,high,Not Malnourished - Moderate Risk
+K110,37,Female,2.6,11.7,110.6,140.8,nan,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - Moderate Risk
+K111,21,Male,2.45,8.5,94.8,143.6,nan,yes,fully_immunized,Mixed Feeding,middle,Not Malnourished - Moderate Risk
+K112,46,Male,2.49,16.9,90.5,144.8,Meningitis,yes,fully_immunized,Complementary Feeding,middle,Not Malnourished - Moderate Risk
+K113,54,Female,3.35,9.3,81.6,147.9,Malaria,yes,fully_immunized,Mixed Feeding,middle,Not Malnourished - Moderate Risk
+K114,27,Female,3.05,12.8,100.1,141.8,nan,yes,fully_immunized,Mixed Feeding,high,Not Malnourished - Moderate Risk
+K115,32,Male,3.61,9.5,76.5,139.8,nan,yes,fully_immunized,Exclusive Breastfeeding,low,Not Malnourished - Moderate Risk
+K116,9,Female,2.99,13.5,88.9,139.0,Malaria,yes,fully_immunized,Complementary Feeding,middle,Not Malnourished - Moderate Risk
+K117,31,Female,3.33,15.6,101.7,143.6,nan,yes,zero_dose,Complementary Feeding,middle,Not Malnourished - Moderate Risk
+K118,10,Female,1.9,15.9,103.9,140.7,nan,yes,fully_immunized,Mixed Feeding,high,Not Malnourished - Moderate Risk
+K119,46,Male,3.43,10.3,110.8,146.8,nan,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - Moderate Risk
+K120,31,Male,3.3,16.4,105.5,141.7,Malaria,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - Moderate Risk
+K121,37,Male,3.13,13.9,100.2,143.7,Pneumonia,yes,fully_immunized,Exclusive Breastfeeding,middle,Not Malnourished - Moderate Risk
+K122,56,Male,3.35,11.7,81.9,144.1,nan,yes,fully_immunized,Complementary Feeding,middle,Not Malnourished - Moderate Risk
+K123,55,Male,3.06,15.5,78.8,144.2,Febrile Illness,yes,fully_immunized,Mixed Feeding,middle,Not Malnourished - Moderate Risk
+K124,49,Female,2.86,13.6,86.6,138.3,nan,yes,fully_immunized,Exclusive Breastfeeding,high,Not Malnourished - Moderate Risk
+K125,44,Female,3.03,8.6,88.2,138.1,Gastroenteritis,yes,fully_immunized,Complementary Feeding,high,Not Malnourished - Moderate Risk
+K126,59,Male,2.85,12.9,80.1,146.9,nan,yes,fully_immunized,Exclusive Breastfeeding,low,Not Malnourished - Moderate Risk
+K127,6,Male,3.17,8.6,86.8,131.0,nan,yes,fully_immunized,Complementary Feeding,high,Not Malnourished - Moderate Risk
+K128,56,Male,2.32,16.1,95.2,144.2,Febrile Illness,yes,fully_immunized,Complementary Feeding,low,Not Malnourished - Moderate Risk
+K129,27,Female,2.57,13.6,92.1,143.3,Febrile Illness,yes,partially_immunized,Complementary Feeding,middle,Not Malnourished - Moderate Risk
+K130,25,Female,3.03,10.6,79.2,133.6,Gastroenteritis,yes,fully_immunized,Complementary Feeding,high,Not Malnourished - Moderate Risk
+K131,14,Female,2.56,9.1,79.8,140.7,nan,yes,fully_immunized,Complementary Feeding,high,Not Malnourished - Moderate Risk
+K132,46,Male,3.35,9.3,77.8,148.7,Febrile Illness,yes,fully_immunized,Exclusive Breastfeeding,low,Not Malnourished - Moderate Risk
+K133,9,Male,4.29,11.0,79.8,138.6,Pneumonia,yes,zero_dose,Mixed Feeding,low,Not Malnourished - Moderate Risk
+K134,35,Male,2.94,15.4,97.8,141.2,Gastroenteritis,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - Moderate Risk
+K135,29,Male,2.66,14.9,105.1,141.3,nan,yes,fully_immunized,Exclusive Breastfeeding,low,Not Malnourished - Moderate Risk
+K136,42,Female,3.11,15.7,82.7,135.4,nan,yes,fully_immunized,Mixed Feeding,high,Not Malnourished - Moderate Risk
+K137,48,Female,2.73,16.0,90.0,138.2,nan,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - Moderate Risk
+K138,28,Male,3.11,13.6,93.0,142.0,nan,yes,fully_immunized,Exclusive Breastfeeding,high,Not Malnourished - Moderate Risk
+K139,30,Male,3.8,12.8,108.4,138.9,Malaria,yes,fully_immunized,Exclusive Breastfeeding,middle,Not Malnourished - Moderate Risk
+K140,22,Female,2.98,13.5,89.5,136.6,Gastroenteritis,yes,fully_immunized,Exclusive Breastfeeding,low,Not Malnourished - Moderate Risk
+K141,9,Female,3.37,8.6,76.2,139.1,Febrile Illness,yes,fully_immunized,Complementary Feeding,high,Not Malnourished - Moderate Risk
+K142,31,Male,3.02,9.7,82.9,145.6,nan,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - Moderate Risk
+K143,23,Male,2.39,11.8,88.0,136.9,Malaria,yes,fully_immunized,Exclusive Breastfeeding,middle,Not Malnourished - Moderate Risk
+K144,25,Male,3.38,9.0,107.8,138.3,nan,yes,zero_dose,Complementary Feeding,high,Not Malnourished - Moderate Risk
+K145,12,Female,3.27,11.3,92.5,133.5,nan,yes,fully_immunized,Complementary Feeding,middle,Not Malnourished - Moderate Risk
+K146,52,Female,2.91,11.4,108.0,146.0,Malaria,yes,partially_immunized,Exclusive Breastfeeding,middle,Not Malnourished - Moderate Risk
+K147,42,Female,2.62,9.6,96.4,139.2,Malaria,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - Moderate Risk
+K148,48,Female,2.88,8.7,99.7,142.8,nan,yes,fully_immunized,Exclusive Breastfeeding,middle,Not Malnourished - Moderate Risk
+K149,30,Female,3.4,14.8,99.7,143.6,nan,yes,fully_immunized,Exclusive Breastfeeding,middle,Not Malnourished - Moderate Risk
+K150,21,Female,2.29,10.7,82.5,139.1,Pneumonia,yes,fully_immunized,Exclusive Breastfeeding,high,Not Malnourished - Moderate Risk
+K151,27,Male,2.72,9.6,101.8,150.3,nan,yes,fully_immunized,Mixed Feeding,middle,Not Malnourished - Low Risk
+K152,31,Male,2.9,8.5,80.8,163.9,Malaria,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - Low Risk
+K153,33,Female,2.85,14.7,76.3,154.9,Malaria,yes,fully_immunized,Exclusive Breastfeeding,middle,Not Malnourished - Low Risk
+K154,50,Male,3.25,12.8,89.1,157.3,nan,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - Low Risk
+K155,35,Female,3.29,9.3,93.3,155.2,Malaria,yes,fully_immunized,Mixed Feeding,high,Not Malnourished - Low Risk
+K156,45,Female,3.39,8.9,77.1,160.4,Measles,yes,zero_dose,Mixed Feeding,low,Not Malnourished - Low Risk
+K157,23,Female,2.81,14.7,88.3,152.4,Malaria,yes,fully_immunized,Complementary Feeding,low,Not Malnourished - Low Risk
+K158,39,Male,3.51,9.8,110.2,152.5,nan,yes,fully_immunized,Complementary Feeding,middle,Not Malnourished - Low Risk
+K159,57,Female,3.16,13.7,100.2,162.7,Febrile Illness,yes,fully_immunized,Complementary Feeding,low,Not Malnourished - Low Risk
+K160,14,Male,3.32,15.4,84.5,147.6,Malaria,yes,fully_immunized,Complementary Feeding,low,Not Malnourished - Low Risk
+K161,42,Male,2.86,9.9,84.3,158.1,Malaria,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - Low Risk
+K162,38,Female,2.92,15.6,80.2,155.9,nan,yes,fully_immunized,Complementary Feeding,middle,Not Malnourished - Low Risk
+K163,57,Female,3.19,15.0,81.4,159.8,nan,yes,fully_immunized,Complementary Feeding,low,Not Malnourished - Low Risk
+K164,37,Male,3.26,11.3,99.7,159.7,Gastroenteritis,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - Low Risk
+K165,9,Female,2.74,9.7,85.1,147.1,nan,yes,fully_immunized,Mixed Feeding,high,Not Malnourished - Low Risk
+K166,41,Male,3.13,14.2,93.0,157.2,nan,yes,fully_immunized,Exclusive Breastfeeding,middle,Not Malnourished - Low Risk
+K167,42,Female,2.97,14.1,86.1,157.4,Gastroenteritis,yes,fully_immunized,Exclusive Breastfeeding,low,Not Malnourished - Low Risk
+K168,54,Female,3.12,11.1,91.5,157.6,Gastroenteritis,yes,fully_immunized,Complementary Feeding,high,Not Malnourished - Low Risk
+K169,39,Male,3.35,11.8,111.4,155.5,nan,yes,fully_immunized,Exclusive Breastfeeding,low,Not Malnourished - Low Risk
+K170,24,Female,2.73,13.2,94.8,154.2,Measles,yes,fully_immunized,Exclusive Breastfeeding,middle,Not Malnourished - Low Risk
+K171,8,Female,3.02,10.7,95.0,142.9,nan,yes,zero_dose,Complementary Feeding,low,Not Malnourished - Low Risk
+K172,18,Female,2.77,11.5,82.1,157.7,Malaria,yes,fully_immunized,Exclusive Breastfeeding,middle,Not Malnourished - Low Risk
+K173,37,Male,2.79,14.5,100.8,150.4,nan,yes,fully_immunized,Complementary Feeding,middle,Not Malnourished - Low Risk
+K174,35,Female,2.84,15.4,81.2,148.1,Measles,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - Low Risk
+K175,9,Male,3.8,11.9,97.0,154.4,nan,yes,fully_immunized,Complementary Feeding,low,Not Malnourished - Low Risk
+K176,13,Male,3.32,15.6,106.8,154.9,Measles,yes,partially_immunized,Exclusive Breastfeeding,high,Not Malnourished - Low Risk
+K177,57,Male,3.53,11.3,84.5,168.5,nan,yes,fully_immunized,Exclusive Breastfeeding,high,Not Malnourished - Low Risk
+K178,46,Male,2.39,12.9,100.4,157.1,nan,yes,zero_dose,Mixed Feeding,high,Not Malnourished - Low Risk
+K179,20,Male,2.78,13.3,76.9,150.7,nan,yes,fully_immunized,Complementary Feeding,middle,Not Malnourished - Low Risk
+K180,51,Male,3.2,14.9,94.4,156.8,nan,yes,partially_immunized,Complementary Feeding,high,Not Malnourished - Low Risk
+K181,55,Female,3.36,14.5,98.8,159.3,nan,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - Low Risk
+K182,21,Male,2.51,13.4,97.1,151.7,Pneumonia,yes,fully_immunized,Complementary Feeding,middle,Not Malnourished - Low Risk
+K183,44,Male,3.1,16.0,106.8,153.2,nan,yes,zero_dose,Exclusive Breastfeeding,low,Not Malnourished - Low Risk
+K184,32,Female,3.14,14.4,79.1,149.1,Gastroenteritis,yes,partially_immunized,Complementary Feeding,high,Not Malnourished - Low Risk
+K185,55,Female,2.84,11.0,110.5,152.8,Pneumonia,yes,fully_immunized,Complementary Feeding,low,Not Malnourished - Low Risk
+K186,38,Male,2.71,14.8,109.9,151.2,Pneumonia,yes,partially_immunized,Mixed Feeding,low,Not Malnourished - Low Risk
+K187,44,Female,3.06,11.0,83.3,147.5,nan,yes,fully_immunized,Exclusive Breastfeeding,high,Not Malnourished - Low Risk
+K188,47,Male,2.15,9.9,92.4,160.7,Febrile Illness,yes,fully_immunized,Exclusive Breastfeeding,low,Not Malnourished - Low Risk
+K189,42,Female,2.84,16.1,75.7,160.5,nan,yes,fully_immunized,Exclusive Breastfeeding,middle,Not Malnourished - Low Risk
+K190,51,Female,2.91,12.8,84.7,161.5,nan,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - Low Risk
+K191,23,Male,2.68,14.6,85.1,157.0,Gastroenteritis,yes,fully_immunized,Mixed Feeding,high,Not Malnourished - Low Risk
+K192,26,Male,2.45,14.1,86.2,149.0,Febrile Illness,yes,fully_immunized,Complementary Feeding,low,Not Malnourished - Low Risk
+K193,21,Male,2.37,15.2,90.8,150.1,Malaria,yes,partially_immunized,Complementary Feeding,middle,Not Malnourished - Low Risk
+K194,39,Male,3.05,12.3,82.9,164.0,Pneumonia,yes,fully_immunized,Exclusive Breastfeeding,middle,Not Malnourished - Low Risk
+K195,40,Male,3.69,16.0,89.9,147.6,nan,yes,fully_immunized,Mixed Feeding,low,Not Malnourished - Low Risk
+K196,47,Male,3.17,9.6,108.0,154.9,Gastroenteritis,yes,partially_immunized,Complementary Feeding,middle,Not Malnourished - Low Risk
+K197,44,Male,2.16,14.7,92.8,151.4,nan,yes,fully_immunized,Exclusive Breastfeeding,middle,Not Malnourished - Low Risk
+K198,15,Male,2.98,11.5,98.2,153.2,Pneumonia,yes,zero_dose,Exclusive Breastfeeding,low,Not Malnourished - Low Risk
+K199,14,Male,3.08,14.7,101.0,153.2,Pneumonia,yes,fully_immunized,Exclusive Breastfeeding,high,Not Malnourished - Low Risk
+K200,59,Male,3.25,8.8,84.0,160.8,nan,yes,fully_immunized,Exclusive Breastfeeding,high,Not Malnourished - Low Risk
