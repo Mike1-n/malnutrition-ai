@@ -3,7 +3,7 @@ malnutrition_model.py
 ---------------------
 Trains a Random Forest classifier on the Kenyan simulated malnutrition dataset.
 Target: multi-class 'malnutrition_category' (5 classes).
-Features include MUAC (mm) alongside anthropometric, clinical, and socio-economic variables.
+Features include anthropometric, clinical, and socio-economic variables (excluding MUAC).
 """
 import pandas as pd
 import numpy as np
@@ -76,7 +76,7 @@ def evaluate_model(model, X_test, y_test, output_dir):
     y_pred = model.predict(X_test)
 
     acc = accuracy_score(y_test, y_pred)
-    print(f"\n── Model Evaluation ──────────────────────────────")
+    print(f"\n== Model Evaluation ==============================")
     print(f"Accuracy : {acc:.4f}")
     print("\nClassification Report:")
     print(classification_report(y_test, y_pred))
@@ -93,7 +93,7 @@ def evaluate_model(model, X_test, y_test, output_dir):
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, 'confusion_matrix.png'))
     plt.close()
-    print(f"Confusion matrix saved → {output_dir}/confusion_matrix.png")
+    print(f"Confusion matrix saved -> {output_dir}/confusion_matrix.png")
 
 
 def main():
@@ -115,7 +115,7 @@ def main():
     target = 'malnutrition_category'
 
     # 2. Drop columns not used as model features
-    drop_cols = ['child_id', target]
+    drop_cols = ['child_id', 'subject_id', target]
     drop_cols = [c for c in drop_cols if c in df.columns]
 
     X = df.drop(columns=drop_cols)
@@ -147,7 +147,7 @@ def main():
 
     # 7. Save model
     joblib.dump(pipeline, model_file)
-    print(f"\nModel saved → {model_file}")
+    print(f"\nModel saved -> {model_file}")
     print("Classes:", pipeline.classes_.tolist())
 
 

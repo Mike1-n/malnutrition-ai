@@ -87,7 +87,7 @@ The application flags a child as **At Risk** or requires **Critical Action** bas
 | **Immunization** | Zero Dose | Partially Immunized | Age Appropriate / Fully |
 | **HIV Status** | HIV Infected | HIV Exposed Unaffected | HIV Unexposed |
 
-> **Note**: The **Machine Learning Model** and standard clinical alerts check multiple dimensions. For instance, an early stop to exclusive breastfeeding (< 2 months) or a "Low" Socio-Economic Status score (< 5/13) will also trigger clinical warnings.
+> **Note**: The **Machine Learning Model** and standard clinical alerts check multiple dimensions. For instance, an early stop to exclusive breastfeeding (< 2 months) or a "Low" Socio-Economic Status score (≤ 1/4) will also trigger clinical warnings.
 
 ---
 

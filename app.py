@@ -58,20 +58,119 @@ def calculate_whz(height, weight, gender):
     # > +2 SD : Overweight
     # > +3 SD : Obese
 
-    if z_score < -3:
-        category = "Severely Wasted"
-    elif z_score < -2:
-        category = "Wasted"
+    if z_score <= -3:
+        category = "Severe Acute Malnutrition"
+    elif z_score <= -2:
+        category = "Moderate Acute Malnutrition"
+    elif z_score <= -1:
+        category = "High Risk"
     elif z_score <= 1:
-        category = "Normal"
-    elif z_score <= 2:
-        category = "At Risk of Overweight"
-    elif z_score <= 3:
-        category = "Overweight"
+        category = "Moderate Risk"
+    elif z_score < 3:
+        category = "Not Malnutritioned - Low Risk"
     else:
         category = "Obese"
 
     return round(z_score, 2), category
+
+def plot_whz_trajectory_with_regions(df):
+    """Generates an interactive Altair chart showing the subject's WHZ trajectory with critical regions."""
+    import altair as alt
+    import pandas as pd
+
+    df_sorted = df.sort_values(by="age_months").copy()
+    
+    # Domain calculations
+    min_age = int(df_sorted["age_months"].min())
+    max_age = int(df_sorted["age_months"].max())
+    
+    xmin = max(0, min_age - 3)
+    xmax = max_age + 3
+    
+    regions = pd.DataFrame([
+        {"ymin": -5.0, "ymax": -3.0, "color": "#e74c3c", "label": "SAM (≤ -3 SD)"},
+        {"ymin": -3.0, "ymax": -2.0, "color": "#e67e22", "label": "MAM (-3 to -2 SD)"},
+        {"ymin": -2.0, "ymax": -1.0, "color": "#f1c40f", "label": "High Risk (-2 to -1 SD)"},
+        {"ymin": -1.0, "ymax": 1.0, "color": "#2ecc71", "label": "Normal (-1 to 1 SD)"},
+        {"ymin": 1.0, "ymax": 3.0, "color": "#58d68d", "label": "Low Risk (1 to 3 SD)"},
+        {"ymin": 3.0, "ymax": 5.0, "color": "#9b59b6", "label": "Obese (≥ 3 SD)"}
+    ])
+    
+    # Theme configuration
+    theme = st.session_state.get('theme', 'dark')
+    text_color = '#ffffff' if theme == 'dark' else '#2c3e50'
+    grid_color = '#444444' if theme == 'dark' else '#e0e0e0'
+    
+    rects = alt.Chart(regions).mark_rect(opacity=0.12).encode(
+        y='ymin:Q',
+        y2='ymax:Q',
+        color=alt.Color('label:N', scale=alt.Scale(domain=list(regions["label"]), range=list(regions["color"])), legend=alt.Legend(title="WHO Regions", titleColor=text_color, labelColor=text_color))
+    )
+    
+    boundaries = pd.DataFrame([{"y": -3.0}, {"y": -2.0}, {"y": -1.0}, {"y": 1.0}, {"y": 3.0}])
+    rules = alt.Chart(boundaries).mark_rule(
+        strokeDash=[3, 3],
+        color='#95a5a6',
+        size=1.0
+    ).encode(
+        y='y:Q'
+    )
+    
+    line = alt.Chart(df_sorted).mark_line(
+        color='#2980b9',
+        size=3.0
+    ).encode(
+        x=alt.X('age_months:Q', title='Age (months)', scale=alt.Scale(domain=[xmin, xmax])),
+        y=alt.Y('z_score:Q', title='WHZ (SD)', scale=alt.Scale(domain=[-4.5, 4.5]))
+    )
+    
+    points = alt.Chart(df_sorted).mark_point(
+        color='#2980b9',
+        size=90,
+        filled=True
+    ).encode(
+        x='age_months:Q',
+        y='z_score:Q',
+        tooltip=[
+            alt.Tooltip('age_months:Q', title='Age (months)'),
+            alt.Tooltip('z_score:Q', title='Z-Score (SD)', format='.2f'),
+            alt.Tooltip('weight:Q', title='Weight (kg)'),
+            alt.Tooltip('height:Q', title='Height (cm)'),
+            alt.Tooltip('whz_category:N', title='Category')
+        ]
+    )
+    
+    # Text labels showing the Z-score value on top of each point
+    labels = alt.Chart(df_sorted).mark_text(
+        align='center',
+        baseline='bottom',
+        dy=-10,
+        fontWeight='bold',
+        color=text_color
+    ).encode(
+        x='age_months:Q',
+        y='z_score:Q',
+        text=alt.Text('z_score:Q', format='+.2f')
+    )
+    
+    chart = alt.layer(rects, rules, line, points, labels).properties(
+        height=320
+    ).configure_view(
+        strokeOpacity=0
+    ).configure_axis(
+        gridColor=grid_color,
+        labelColor=text_color,
+        titleColor=text_color,
+        domainColor=text_color,
+        tickColor=text_color
+    ).configure_title(
+        color=text_color,
+        fontWeight='bold'
+    ).interactive(
+        bind_y=False # Lock Y-axis zoom/pan, zoom/pan *alone* on X-axis (Age) for best usability!
+    )
+    
+    return chart
 
 # --- 2. Styles & Theme ---
 if 'theme_toggle' not in st.session_state:
@@ -246,7 +345,47 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# --- 3. Header ---
+# --- 3. Sidebar Navigation & Connection ---
+st.sidebar.markdown("""
+    <div style="text-align: center; margin-bottom: 20px;">
+        <h2 style="margin: 0; font-size: 1.5rem; color: #3498db;">🧭 Navigation</h2>
+    </div>
+""", unsafe_allow_html=True)
+
+app_mode = st.sidebar.radio(
+    "Navigation Menu",
+    ["🏥 New Assessment", "📂 History & Growth Trends"],
+    label_visibility="collapsed"
+)
+
+# Load Supabase config from secrets if available
+sb_url = st.secrets.get("SUPABASE_URL", "")
+sb_key = st.secrets.get("SUPABASE_KEY", "")
+
+# Clean up default secrets.toml placeholders
+if sb_url == "https://your-project.supabase.co" or not sb_url:
+    sb_url = ""
+if sb_key == "your-anon-key" or not sb_key:
+    sb_key = ""
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("🔌 Database Connection")
+
+if not sb_url or not sb_key:
+    st.sidebar.warning("Supabase credentials not found in secrets. Configure below:")
+    sb_url_input = st.sidebar.text_input("Supabase URL", value="", placeholder="https://xyz.supabase.co")
+    sb_key_input = st.sidebar.text_input("Supabase Anon Key", value="", type="password", placeholder="eyJhbGciOiJIUzI1NiIsIn...")
+    
+    if sb_url_input and sb_key_input:
+        sb_url = sb_url_input.strip()
+        sb_key = sb_key_input.strip()
+        st.sidebar.success("Connected for this session!")
+    else:
+        st.sidebar.info("Running in offline mode (Saving disabled).")
+else:
+    st.sidebar.success("Connected via secrets.toml")
+
+# --- 4. Header ---
 head_col, tog_col = st.columns([6, 1])
 
 with tog_col:
@@ -264,209 +403,275 @@ with head_col:
 if model is None:
     st.error("⚠️ Model not found. Please train the model first.")
 else:
-    # --- 4. Main Layout ---
-    left_col, right_col = st.columns([1.2, 1], gap="large")
+    if app_mode == "🏥 New Assessment":
+        # --- 5. Main Assessment Layout ---
+        left_col, right_col = st.columns([1.2, 1], gap="large")
 
-    with left_col:
-        st.subheader("📝 Patient Assessment")
-        
-        # Sections for better organization (Single Page View)
-        
-        with st.expander("1. 📏 Growth Metrics (Current)", expanded=True):
-            c1, c2 = st.columns(2)
-            with c1: gender = st.selectbox("Gender", ["Male", "Female"])
-            with c2: current_age = st.number_input("Age (months)", 0, 60, 24)
+        with left_col:
+            st.subheader("📝 Subject Assessment")
             
-            c3, c4 = st.columns(2)
-            # Validation Rule: Weight [2, 30]
-            with c3: birth_weight = st.number_input("Birth Weight (kg)", 0.5, 6.0, 3.0, step=0.1)
-            with c4: illness_count_last_month = st.number_input("Illnesses in Last Month", 0, 10, 0)
+            with st.expander("1. 📏 Growth Metrics (Current & Past History)", expanded=True):
+                subject_id_input = st.text_input("Subject ID", value="S001", help="Enter a unique identifier for the subject.")
+                c1, c2 = st.columns(2)
+                with c1: gender = st.selectbox("Gender", ["Male", "Female"])
+                with c2: current_age = st.number_input("Age (months)", 0, 59, 24)
+                
+                c3, c4 = st.columns(2)
+                with c3: birth_weight = st.number_input("Birth Weight (kg)", 0.5, 6.0, 3.0, step=0.1)
+                with c4: st.write("")
 
-            st.markdown("<b>Current Measurements:</b>", unsafe_allow_html=True)
-            c5, c6, c7 = st.columns(3)
-            with c5: current_weight = st.number_input("Current Weight (kg)", min_value=2.0, max_value=30.0, value=9.5, step=0.1)
-            with c6: current_height = st.number_input("Current Height (cm)", min_value=45.0, max_value=120.0, value=75.0, step=0.1)
-            with c7: muac_mm = st.number_input("MUAC (mm)", min_value=80, max_value=200, value=135, step=1)
+                st.markdown("<b>Current Visit Date & Measurements:</b>", unsafe_allow_html=True)
+                import datetime
+                c_date, c5, c6 = st.columns([1.2, 1, 1])
+                with c_date: current_date = st.date_input("Visit Date", datetime.date.today())
+                with c5: current_weight = st.number_input("Current Weight (kg)", min_value=2.0, max_value=30.0, value=9.5, step=0.1)
+                with c6: current_height = st.number_input("Current Height (cm)", min_value=45.0, max_value=120.0, value=75.0, step=0.1)
 
-        with st.expander("2. 💊 Health & Clinical History", expanded=True):
-            col_a, col_b = st.columns(2)
-            with col_a:
-                # Dynamic Immunization Options based on Age
-                imm_options = ["Age Appropriate", "Partially Immunized", "Zero Dose"]
-                if current_age >= 12:
-                    imm_options.insert(1, "Fully Immunized (12+ months)")
+                st.markdown("---")
+                st.markdown("<b>📜 Past Visits (Optional for Z-Score Trajectory)</b>", unsafe_allow_html=True)
                 
-                imm_label = st.selectbox("Immunization Status", imm_options, index=0)
+                p_col1, p_col2 = st.columns(2)
+                with p_col1:
+                    include_past1 = st.checkbox("Include Past Visit 1 (Most Recent)", value=False)
+                with p_col2:
+                    include_past2 = st.checkbox("Include Past Visit 2 (Older)", value=False)
                 
-                # Map back to model value
-                imm_map = {
-                    "Age Appropriate": "age_appropriate",
-                    "Fully Immunized (12+ months)": "fully_immunized",
-                    "Partially Immunized": "partially_immunized",
-                    "Zero Dose": "zero_dose"
-                }
-                immunization_status = imm_map[imm_label]
-
-                recurrent_diarrhea = st.selectbox("Recurrent Diarrhea?", ["yes", "no"], index=1)
-                chronic_illness = st.selectbox("Chronic Illness?", ["yes", "no"], index=1)
-            with col_b:
-                # HIV Status
-                hiv_options = ["HIV Unexposed", "HIV Exposed Unaffected", "HIV Infected", "Unknown"]
-                hiv_label = st.selectbox("HIV Status", hiv_options, index=0)
+                past1_data = None
+                past2_data = None
                 
-                # Map back to model value
-                hiv_map = {
-                    "HIV Unexposed": "hiv_unexposed",
-                    "HIV Exposed Unaffected": "hiv_exposed_unaffected",
-                    "HIV Infected": "hiv_infected",
-                    "Unknown": "unknown"
-                }
-                hiv_exposure = hiv_map[hiv_label]
-                
-                congenital_disease = st.selectbox("Congenital Disease?", ["yes", "no"], index=1)
-
-        with st.expander("3. 🍲 Feeding Practices", expanded=True):
-            col_c, col_d = st.columns(2)
-            with col_c:
-                # Exclusive Breastfeeding Duration Input
-                ebf_duration = st.number_input("Duration of Exclusive Breastfeeding (months)", min_value=0, max_value=12, value=6, help="How many months was the child exclusively breastfed?")
-                
-                # Map to model input (yes if >= 6 months, else no)
-                breastfeeding_6m = "yes" if ebf_duration >= 6 else "no"
-                
-                # meal_freq input removed from UI as per user request
-                meal_freq = 3 # Default value for model compatibility
-            with col_d:
-                if current_age >= 6:
-                    st.markdown('<p style="color:var(--text-color); font-weight:600;">Complementary Feeding (Select all consumed yesterday):</p>', unsafe_allow_html=True)
+                if include_past1:
+                    st.markdown("<p style='font-weight:600; color:var(--primary-color); margin-bottom: 2px;'>Past Visit 1 (Most Recent)</p>", unsafe_allow_html=True)
+                    pc1, pc2, pc3 = st.columns([1.2, 1, 1])
+                    with pc1:
+                        past1_date = st.date_input("Visit 1 Date", value=current_date - datetime.timedelta(days=30), key="past1_date")
+                    with pc2:
+                        past1_weight = st.number_input("Visit 1 Weight (kg)", min_value=2.0, max_value=30.0, value=9.0, step=0.1, key="past1_weight")
+                    with pc3:
+                        past1_height = st.number_input("Visit 1 Height (cm)", min_value=45.0, max_value=120.0, value=73.0, step=0.1, key="past1_height")
                     
-                    nutrient_options = [
-                        "Grains, Roots, Tubers",
-                        "Legumes & Nuts",
-                        "Dairy Products",
-                        "Flesh Foods",
-                        "Eggs",
-                        "Vitamin A rich fruits/vegetables",
-                        "Other Fruits"
-                    ]
+                    days_diff1 = (current_date - past1_date).days
+                    past1_age = int(round(current_age - (days_diff1 / 30.4375)))
+                    if past1_age < 0:
+                        st.error("❌ Visit 1 date is before child's birth (age < 0).")
+                    elif past1_age > 59:
+                        st.error("❌ Visit 1 age exceeds 59 months.")
+                    else:
+                        st.caption(f"Estimated Age at Visit 1: **{past1_age} months**")
+                        past1_data = {"date": past1_date, "weight": past1_weight, "height": past1_height, "age_months": past1_age}
+                
+                if include_past2:
+                    st.markdown("<p style='font-weight:600; color:var(--primary-color); margin-bottom: 2px;'>Past Visit 2 (Older)</p>", unsafe_allow_html=True)
+                    pc4, pc5, pc6 = st.columns([1.2, 1, 1])
+                    with pc4:
+                        past2_date = st.date_input("Visit 2 Date", value=current_date - datetime.timedelta(days=60), key="past2_date")
+                    with pc5:
+                        past2_weight = st.number_input("Visit 2 Weight (kg)", min_value=2.0, max_value=30.0, value=8.5, step=0.1, key="past2_weight")
+                    with pc6:
+                        past2_height = st.number_input("Visit 2 Height (cm)", min_value=45.0, max_value=120.0, value=71.0, step=0.1, key="past2_height")
                     
-                    selected_nutrients = st.multiselect("Select Nutrients", nutrient_options, label_visibility="collapsed")
-                    feeding_diversity = len(selected_nutrients)
-                    st.caption(f"Calculated Diversity Score: **{feeding_diversity}/7**")
+                    days_diff2 = (current_date - past2_date).days
+                    past2_age = int(round(current_age - (days_diff2 / 30.4375)))
+                    if past2_age < 0:
+                        st.error("❌ Visit 2 date is before child's birth (age < 0).")
+                    elif past2_age > 59:
+                        st.error("❌ Visit 2 age exceeds 59 months.")
+                    else:
+                        st.caption(f"Estimated Age at Visit 2: **{past2_age} months**")
+                        past2_data = {"date": past2_date, "weight": past2_weight, "height": past2_height, "age_months": past2_age}
+
+            with st.expander("2. 💊 Health & Clinical History", expanded=True):
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    imm_options = ["Age Appropriate", "Partially Immunized", "Zero Dose"]
+                    if current_age >= 12:
+                        imm_options.insert(1, "Fully Immunized (12+ months)")
+                    
+                    imm_label = st.selectbox("Immunization Status", imm_options, index=0)
+                    
+                    imm_map = {
+                        "Age Appropriate": "age_appropriate",
+                        "Fully Immunized (12+ months)": "fully_immunized",
+                        "Partially Immunized": "partially_immunized",
+                        "Zero Dose": "zero_dose"
+                    }
+                    immunization_status = imm_map[imm_label]
+
+                    recurrent_diarrhea = st.selectbox("Recurrent Diarrhea?", ["yes", "no"], index=1)
+                    chronic_illness = st.selectbox("Chronic Illness? (CHD, TB, CP)", ["yes", "no"], index=1)
+                with col_b:
+                    hiv_options = ["HIV Unexposed", "HIV Exposed Unaffected", "HIV Infected", "Unknown"]
+                    hiv_label = st.selectbox("HIV Status", hiv_options, index=0)
+                    
+                    hiv_map = {
+                        "HIV Unexposed": "hiv_unexposed",
+                        "HIV Exposed Unaffected": "hiv_exposed_unaffected",
+                        "HIV Infected": "hiv_infected",
+                        "Unknown": "unknown"
+                    }
+                    hiv_exposure = hiv_map[hiv_label]
+                    
+                    recent_illness = st.selectbox("Recent Illness? (in last month)", ["yes", "no"], index=1)
+
+            with st.expander("3. 🍲 Feeding Practices", expanded=True):
+                col_c, col_d = st.columns(2)
+                with col_c:
+                    ebf_duration = st.number_input("Duration of Exclusive Breastfeeding (months)", min_value=0, max_value=12, value=6, help="How many months was the child exclusively breastfed?")
+                    breastfeeding_6m = "yes" if ebf_duration >= 6 else "no"
+                    meal_freq = 3 # Default value for model compatibility
+                with col_d:
+                    if current_age >= 6:
+                        st.markdown('<p style="color:var(--text-color); font-weight:600;">Complementary Feeding (Select all consumed yesterday):</p>', unsafe_allow_html=True)
+                        
+                        nutrient_options = [
+                            "Breast Milk",
+                            "Grains, Roots, Tubers",
+                            "Legumes & Nuts",
+                            "Dairy Products",
+                            "Flesh Foods",
+                            "Eggs",
+                            "Vitamin A rich fruits/vegetables",
+                            "Other Fruits"
+                        ]
+                        
+                        selected_nutrients = st.multiselect("Select Nutrients", nutrient_options, label_visibility="collapsed")
+                        feeding_diversity = len(selected_nutrients)
+                        st.caption(f"Calculated Diversity Score: **{feeding_diversity}/8**")
+                    else:
+                        st.info(f"ℹ️ Complementary feeding is recommended starting at 6 months. (Current Age: {current_age}m)")
+                        feeding_diversity = 0
+                        selected_nutrients = []
+
+            with st.expander("4. 🏠 Socio-Economic Factors (SES Score)", expanded=True):
+                col_e, col_f = st.columns(2)
+                
+                with col_e:
+                    income_val = st.number_input("Household Monthly Income (KES)", min_value=0, value=5000, step=500, help="Enter monthly household income in Kenyan Shillings.")
+                    if income_val < 3000:
+                        income_score = 0
+                        income_level = "low"
+                    elif income_val <= 10000:
+                        income_score = 1
+                        income_level = "middle"
+                    else:
+                        income_score = 2
+                        income_level = "high"
+
+                with col_f:
+                    crowding_val = st.number_input("Household Crowding (Persons per Room)", min_value=1, value=3, step=1, help="Enter the number of persons per room.")
+                    if crowding_val < 3:
+                        crowding_score = 2
+                    elif crowding_val <= 5:
+                        crowding_score = 1
+                    else:
+                        crowding_score = 0
+
+                ses_score_total = income_score + crowding_score
+                
+                if ses_score_total <= 1:
+                    ses_category_label = "Low SES (High Risk)"
+                    ses_color = "#e74c3c"
+                elif ses_score_total <= 3:
+                    ses_category_label = "Middle SES (Moderate Risk)"
+                    ses_color = "#f39c12"
                 else:
-                    st.info(f"ℹ️ Complementary feeding is recommended starting at 6 months. (Current Age: {current_age}m)")
-                    feeding_diversity = 0 # Not applicable yet
-                    selected_nutrients = []
+                    ses_category_label = "High SES (Low Risk)"
+                    ses_color = "#2ecc71"
 
-            
-        with st.expander("4. 🏠 Socio-Economic Factors (SES Score)", expanded=True):
-            col_e, col_f = st.columns(2)
-            
-            with col_e:
-                # 1. Education (0, 1, 2, 4)
-                edu_options = ["No formal education", "Primary education", "Secondary education", "College / University"]
-                edu_input = st.selectbox("Caregiver Education", edu_options, index=2)
+                st.markdown("---")
+                c_score, c_cat = st.columns([1, 2])
+                with c_score:
+                    st.markdown(f"**Total SES Score:** <span style='font-size:1.2em'>{ses_score_total} / 4</span>", unsafe_allow_html=True)
+                with c_cat:
+                    st.markdown(f"**SES Category:** <span style='color:{ses_color}; font-weight:bold; font-size:1.2em'>{ses_category_label}</span>", unsafe_allow_html=True)
                 
-                edu_points_map = {
-                    "No formal education": 0,
-                    "Primary education": 1,
-                    "Secondary education": 2,
-                    "College / University": 4
-                }
-                edu_score = edu_points_map[edu_input]
+                # Derive proxy values for features not in the UI
+                education_level = "primary" if income_level == "low" else "secondary" if income_level == "middle" else "tertiary"
+                water_access = "no" if income_level == "low" else "yes"
+                sanitation_access = "no" if (income_level == "low" or crowding_score == 0) else "yes"
                 
-                # Map for model input
-                edu_model_map = {
-                    "No formal education": "none",
-                    "Primary education": "primary",
-                    "Secondary education": "secondary",
-                    "College / University": "tertiary"
-                }
-                education_level = edu_model_map[edu_input]
+            st.markdown("<br>", unsafe_allow_html=True)
+            age_invalid = current_age < 0 or current_age > 59
+            
+            # Past visits validation
+            date_invalid = False
+            date_error_msg = ""
+            if include_past1:
+                if past1_date >= current_date:
+                    date_invalid = True
+                    date_error_msg = "❌ **Invalid Dates**: Past Visit 1 date must be before the current visit date."
+                elif past1_age < 0 or past1_age > 59:
+                    date_invalid = True
+                    date_error_msg = "❌ **Invalid Age**: Estimated age at Past Visit 1 must be between 0 and 59 months."
+            if include_past2:
+                if past2_date >= current_date:
+                    date_invalid = True
+                    date_error_msg = "❌ **Invalid Dates**: Past Visit 2 date must be before the current visit date."
+                elif past2_age < 0 or past2_age > 59:
+                    date_invalid = True
+                    date_error_msg = "❌ **Invalid Age**: Estimated age at Past Visit 2 must be between 0 and 59 months."
+                if include_past1 and past2_date >= past1_date:
+                    date_invalid = True
+                    date_error_msg = "❌ **Invalid Dates**: Past Visit 2 date must be before Past Visit 1 date."
 
-                # 2. Occupation (0, 1, 2, 3)
-                occ_options = ["Unemployed", "Casual labourer", "Small business", "Formal employment / Professional"]
-                occ_input = st.selectbox("Caregiver Occupation", occ_options, index=2)
-                occ_points_map = {
-                    "Unemployed": 0,
-                    "Casual labourer": 1,
-                    "Small business": 2,
-                    "Formal employment / Professional": 3
-                }
-                occ_score = occ_points_map[occ_input]
-
-            with col_f:
-                # 3. Household Assets (1 point each)
-                # "household assets (electricity(1),piped water(1),refrigiretor (1),television(1))"
-                assets_options = ["Electricity", "Piped Water", "Refrigerator", "Television"]
-                selected_assets = st.multiselect("Household Assets (Select all that apply)", assets_options)
-                assets_score = len(selected_assets) * 1
+            if age_invalid:
+                st.error("❌ **Invalid Age**: Subject age must be between 0 and 59 months.")
+            elif date_invalid:
+                st.error(date_error_msg)
                 
-                # Infer water access (for model/recommendations) if Piped Water is selected, 
-                # but allow manual override if they have other clean water access
-                has_piped_water = "Piped Water" in selected_assets
-                
-                # 4. Household Crowding (0, 1, 2)
-                # ">3persons per room(0),2-3 persons per room(1),<2 persons per room(2)"
-                crowding_options = ["> 3 persons per room", "2 - 3 persons per room", "< 2 persons per room"]
-                crowding_input = st.selectbox("Household Crowding", crowding_options, index=1)
-                crowding_points_map = {
-                    "> 3 persons per room": 0,
-                    "2 - 3 persons per room": 1,
-                    "< 2 persons per room": 2
-                }
-                crowding_score = crowding_points_map[crowding_input]
+            predict_btn = st.button("🔍 ANALYZE COMPREHENSIVE RISK", type="primary", disabled=(age_invalid or date_invalid))
 
-            # Calculate SES Score
-            ses_score_total = edu_score + occ_score + assets_score + crowding_score
-            
-            # Determine SES Category and Model mapping
-            # <5 (low ses), 5-8 (middle ses) >9 (actually >=9) (high ses)
-            # Max score: 4 + 3 + 4 + 2 = 13. User said max 12, but math allows 13. 
-            # Logic: < 5, 5-8, > 8 (9+)
-            
-            if ses_score_total < 5:
-                ses_category_label = "Low SES"
-                income_level = "low" # Model mapping
-                ses_color = "#e74c3c" # Red
-            elif 5 <= ses_score_total <= 8:
-                ses_category_label = "Middle SES"
-                income_level = "middle" # Model mapping
-                ses_color = "#f39c12" # Orange
-            else:
-                ses_category_label = "High SES"
-                income_level = "high" # Model mapping
-                ses_color = "#2ecc71" # Green
+        if 'assessment_results' not in st.session_state:
+            st.session_state.assessment_results = None
 
-            st.markdown("---")
-            c_score, c_cat = st.columns([1, 2])
-            with c_score:
-                st.markdown(f"**Total SES Score:** <span style='font-size:1.2em'>{ses_score_total} / 13</span>", unsafe_allow_html=True)
-            with c_cat:
-                st.markdown(f"**SES Category:** <span style='color:{ses_color}; font-weight:bold; font-size:1.2em'>{ses_category_label}</span>", unsafe_allow_html=True)
-            
-            # Auto-infer WASH factors from assets
-            water_access = "yes" if has_piped_water else "no"
-            sanitation_access = "yes" if ses_score_total >= 5 else "no"  # Reasonable proxy given data
-            
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        predict_btn = st.button("🔍 ANALYZE COMPREHENSIVE RISK", type="primary")
-
-    with right_col:
-        st.subheader("📊 Clinical Assessment Results")
-        
         if predict_btn:
-            # Clinical Calcs (Current)
             current_whz, whz_category = calculate_whz(current_height, current_weight, gender)
             z_score = current_whz
 
-            # Input Vector for Model
+            # Build trajectory dataset (Current + Past visits)
+            trajectory_list = []
+            
+            # Current visit
+            trajectory_list.append({
+                "age_months": int(current_age),
+                "weight": float(current_weight),
+                "height": float(current_height),
+                "z_score": float(z_score) if z_score is not None else None,
+                "whz_category": whz_category,
+                "visit_label": "Current"
+            })
+            
+            # Past Visit 1
+            if include_past1:
+                past1_whz, past1_cat = calculate_whz(past1_height, past1_weight, gender)
+                trajectory_list.append({
+                    "age_months": int(past1_age),
+                    "weight": float(past1_weight),
+                    "height": float(past1_height),
+                    "z_score": float(past1_whz) if past1_whz is not None else None,
+                    "whz_category": past1_cat,
+                    "visit_label": "Past 1"
+                })
+                
+            # Past Visit 2
+            if include_past2:
+                past2_whz, past2_cat = calculate_whz(past2_height, past2_weight, gender)
+                trajectory_list.append({
+                    "age_months": int(past2_age),
+                    "weight": float(past2_weight),
+                    "height": float(past2_height),
+                    "z_score": float(past2_whz) if past2_whz is not None else None,
+                    "whz_category": past2_cat,
+                    "visit_label": "Past 2"
+                })
+            
+            # Sort trajectory list chronologically by age_months
+            trajectory_list = sorted(trajectory_list, key=lambda x: x["age_months"])
+
+            # Input Vector for Model (using all features except MUAC)
             input_vector = pd.DataFrame([{
                 'age_months': current_age,
                 'weight': current_weight,
                 'height': current_height,
-                'muac_mm': muac_mm,
                 'gender': gender,
                 'birth_weight': birth_weight,
                 'household_income_level': income_level,
@@ -475,37 +680,70 @@ else:
                 'sanitation_access': sanitation_access,
                 'hiv_exposure': hiv_exposure,
                 'chronic_illness': chronic_illness,
-                'congenital_disease': congenital_disease,
                 'recurrent_diarrhea': recurrent_diarrhea,
                 'exclusive_breastfeeding_6m': breastfeeding_6m,
                 'immunization_status': immunization_status,
                 'feeding_practice': "Mixed Feeding" if feeding_diversity > 3 else "Complementary Feeding" if current_age >= 6 else "Exclusive Breastfeeding",
-                'recent_illness': "no" if illness_count_last_month == 0 else "Fever",
+                'recent_illness': "Fever" if recent_illness == "yes" else "no",
+                'z_score': z_score if z_score is not None else 0.0,
             }])
 
             # Prediction (Multi-class)
             try:
-                # The model now outputs 5 classes instead of a binary probability
-                predicted_class = model.predict(input_vector)[0]
                 probabilities = model.predict_proba(input_vector)[0]
-                classes = model.classes_
-                prob = probabilities[list(classes).index(predicted_class)]
+                classes = list(model.classes_)
+                
+                # Enforce Z-score clinical constraints:
+                # Malnourished (Moderate/Severe Malnutrition) ONLY if z_score <= -2.0
+                # Otherwise, Not Malnourished (High/Moderate/Low Risk)
+                if z_score <= -2.0:
+                    allowed_classes = ["Moderate Malnutrition", "Severe Malnutrition"]
+                else:
+                    allowed_classes = ["High Risk", "Moderate Risk", "Low Risk"]
+                
+                # Filter probabilities to allowed classes
+                allowed_probs = []
+                for c in allowed_classes:
+                    if c in classes:
+                        allowed_probs.append((c, probabilities[classes.index(c)]))
+                    else:
+                        allowed_probs.append((c, 0.0))
+                
+                # Find the allowed class with the highest probability
+                best_class, best_prob = max(allowed_probs, key=lambda x: x[1])
+                
+                # If all allowed classes have 0 probability (unlikely), fallback to clinical rules
+                if best_prob == 0.0:
+                    if z_score <= -3.0:
+                        predicted_class = "Severe Malnutrition"
+                    elif z_score <= -2.0:
+                        predicted_class = "Moderate Malnutrition"
+                    else:
+                        if z_score <= -1.0:
+                            predicted_class = "High Risk"
+                        else:
+                            predicted_class = "Low Risk"
+                    prob = 1.0
+                else:
+                    # Normalize probability among allowed classes
+                    sum_probs = sum(p for c, p in allowed_probs)
+                    if sum_probs > 0:
+                        prob = best_prob / sum_probs
+                    else:
+                        prob = best_prob
+                    predicted_class = best_class
                 
                 ml_risk = predicted_class
                 
-                # Determine styling based on class
-                if "Severe" in ml_risk:
+                if "Severe" in ml_risk or "High Risk" in ml_risk:
                     ml_class = "status-danger"
-                    bar_color = "#e74c3c" # Red
-                elif "Moderate Malnutrition" in ml_risk or "High Risk" in ml_risk:
+                    bar_color = "#e74c3c"
+                elif "Moderate Malnutrition" in ml_risk or "Moderate Risk" in ml_risk:
                     ml_class = "status-warning"
-                    bar_color = "#f39c12" # Orange
-                elif "Moderate Risk" in ml_risk:
-                    ml_class = "status-warning"
-                    bar_color = "#f1c40f" # Yellow
+                    bar_color = "#ffa502"
                 else:
                     ml_class = "status-normal"
-                    bar_color = "#2ecc71" # Green
+                    bar_color = "#2ecc71"
                     
             except Exception as e:
                 prob, ml_risk, ml_class, bar_color = 0, "Error", "status-neutral", "#95a5a6"
@@ -516,24 +754,32 @@ else:
             contributing_factors = []
             
             if z_score is not None:
-                if z_score < -3:
-                    risk_factors.append("Severely Wasted (WHZ < -3 SD)")
-                    contributing_factors.append("Critically low Weight-for-Height Z-Score")
-                elif z_score < -2:
-                    risk_factors.append("Wasted (Moderately) (-3 ≤ WHZ < -2 SD)")
-                    contributing_factors.append("Low Weight-for-Height Z-Score")
-                elif z_score > 1:
-                    risk_factors.append("At Risk of Overweight (WHZ > +1 SD)")
-                    contributing_factors.append("Elevated Weight-for-Height Z-Score")
-                    if z_score > 2:
-                        risk_factors[-1] = "Overweight (WHZ > +2 SD)"
-                    if z_score > 3:
-                        risk_factors[-1] = "Obese (WHZ > +3 SD)"
+                if z_score <= -3:
+                    risk_factors.append("Severe Acute Malnutrition (WHZ ≤ -3 SD) - Recommend immediate treatment.")
+                    contributing_factors.append("Critically low Weight-for-Height Z-Score (SAM)")
+                elif z_score <= -2:
+                    risk_factors.append("Moderate Acute Malnutrition (-3 < WHZ ≤ -2 SD) - Recommend nutritional treatment.")
+                    contributing_factors.append("Low Weight-for-Height Z-Score (MAM)")
+                elif z_score <= -1:
+                    risk_factors.append("High Risk (-2 < WHZ ≤ -1 SD)")
+                    contributing_factors.append("Below average Weight-for-Height Z-Score")
+                elif z_score <= 1:
+                    # Moderate risk (normal range)
+                    contributing_factors.append("Weight-for-Height Z-Score (Moderate Risk)")
+                elif z_score < 3:
+                    # Not Malnourished - Low Risk
+                    pass
+                else:
+                    risk_factors.append("Obese (WHZ ≥ 3 SD) - Recommend obesity management.")
+                    contributing_factors.append("Extremely high Weight-for-Height Z-Score")
             
-            if illness_count_last_month > 0:
-                contributing_factors.append(f"Recent illness history ({illness_count_last_month} in last month)")
-                if illness_count_last_month >= 3:
-                     risk_factors.append("High frequency of recent illnesses")
+            if birth_weight < 2.5:
+                risk_factors.append("⚠️ Low Birth Weight (< 2.5 kg): Increased Malnutrition Risk")
+                contributing_factors.append("Low birth weight (< 2.5 kg)")
+                
+            if recent_illness == "yes":
+                contributing_factors.append("Recent illness history")
+                risk_factors.append("Recent Illness (High Risk)")
                 
             if immunization_status == 'zero_dose':
                  risk_factors.append("❌ Zero Dose: Immediate Vaccination Referral Required")
@@ -558,68 +804,501 @@ else:
                 risk_factors.append(f"⚠️ Moderate Risk: Exclusive Breastfeeding stopped early (2-5 months)")
                 contributing_factors.append("Early cessation of exclusive breastfeeding")
             
-            if current_age >= 6 and feeding_diversity < 4:
-                risk_factors.append("Low Dietary Diversity (< 4 groups)")
+            if current_age >= 6 and feeding_diversity < 5:
+                risk_factors.append("Low Dietary Diversity (< 5 groups)")
                 contributing_factors.append("Low feeding diversity score")
             
             if water_access == 'no' or sanitation_access == 'no':
                 risk_factors.append("Poor WASH conditions (Infection Risk)")
                 contributing_factors.append("Limited access to clean water/sanitation")
 
-            if ses_category_label == "Low SES":
-                risk_factors.append(f"Low Socio-Economic Status (Score: {ses_score_total}/13): High Malnutrition Risk")
+            if ses_category_label.startswith("Low SES"):
+                risk_factors.append(f"Low Socio-Economic Status (Score: {ses_score_total}/4): High Malnutrition Risk")
                 contributing_factors.append("Lower socio-economic factors")
 
             if len(contributing_factors) == 0:
                 contributing_factors.append("No major specific risk factors identified; percentage reflects baseline demographic/growth patterns.")
 
-            if not risk_factors:
-                rec_text = "✅ Child is growing well. Maintain healthy feeding practices."
-                rec_class = "rec-success"
-            else:
-                rec_text = "⚠️ **CRITICAL FINDINGS:**<br>" + "<br>".join([f"- {factor}" for factor in risk_factors])
-                if ((z_score is not None and z_score < -2) or ml_risk == "High Risk"):
-                    rec_text += "<br><br><b>ACTION: Immediate clinical assessment and referral required.</b>"
-                else:
-                    rec_text += "<br><br><b>ACTION: Close monitoring and active nutritional support advised.</b>"
-                rec_class = "rec-critical" if ((z_score is not None and z_score <= -3) or ml_risk == "High Risk") else "rec-warning"
+            # --- Multi-parametric Clinical Assessment Synthesis ---
+            growth_score = 0
+            growth_recs = []
             
-            # Display Grid
-            r1_col1, r1_col2 = st.columns(2)
-            with r1_col1:
-                contrib_html = "".join([f"<li style='color: var(--text-color); font-size: 0.85rem; margin-bottom: 3px;'>{cf}</li>" for cf in contributing_factors])
+            # Growth metrics
+            if z_score is not None:
+                if z_score <= -3:
+                    growth_score += 3
+                    growth_recs.append("Severe Acute Malnutrition (WHZ ≤ -3 SD)")
+                elif z_score <= -2:
+                    growth_score += 2
+                    growth_recs.append("Moderate Wasting (WHZ ≤ -2 SD)")
+                elif z_score <= -1:
+                    growth_score += 1
+                    growth_recs.append("Mild Wasting (WHZ ≤ -1 SD)")
+                elif z_score >= 3:
+                    growth_score += 2
+                    growth_recs.append("Obesity (WHZ ≥ 3 SD)")
+                else:
+                    growth_recs.append("Normal WHZ Score")
+            
+            if birth_weight < 2.5:
+                growth_score += 1
+                growth_recs.append("Low Birth Weight (< 2.5 kg)")
+                
+            # Trajectory
+            trajectory_status = "Single visit recorded"
+            if len(trajectory_list) > 1:
+                first_z = trajectory_list[0]['z_score']
+                last_z = trajectory_list[-1]['z_score']
+                if first_z is not None and last_z is not None:
+                    z_diff = last_z - first_z
+                    if z_diff < -0.2:
+                        growth_score += 1
+                        trajectory_status = f"Declining Trend (dropped {z_diff:.2f} SD)"
+                        growth_recs.append("Deteriorating Trajectory")
+                    elif z_diff > 0.2:
+                        trajectory_status = f"Improving Trend (gained {z_diff:+.2f} SD)"
+                    else:
+                        trajectory_status = "Stable Trend"
 
-                st.markdown(f"""
-                <div class="metric-container">
-                    <p class="label-text">🤖 Trend Prediction</p>
-                    <div class="status-badge {ml_class}">{ml_risk}</div>
-                    <p style="margin-top: 15px; color: var(--text-muted); font-size: 0.9rem;">Confidence: <b style="color: var(--text-color); font-size: 1.2rem; font-weight: 800;">{prob:.1%}</b></p>
-                    <div class="progress-bar-container">
-                        <div class="progress-bar-fill" style="width: {prob*100}%; background-color: {bar_color};"></div>
-                    </div>
-                </div>""", unsafe_allow_html=True)
+            # Clinical Pillar
+            clinical_score = 0
+            clinical_recs = []
+            if hiv_exposure == 'hiv_infected':
+                clinical_score += 3
+                clinical_recs.append("HIV Infected")
+            elif hiv_exposure == 'hiv_exposed_unaffected':
+                clinical_score += 1
+                clinical_recs.append("HIV Exposed")
+            elif hiv_exposure == 'unknown':
+                clinical_recs.append("HIV Status Unknown")
                 
-                st.markdown(f"""<div class="rec-box {rec_class}" style="margin-top: 10px; padding: 15px;"><p style="font-size: 1.0rem; margin-bottom: 0;"><b>Clinical Recommendation based on Risk Factors:</b><br><br>{rec_text}</p></div>""", unsafe_allow_html=True)
-            with r1_col2:
-                # Z-score display logic
-                # Badge color based on WHO category
-                if whz_category == "Severely Wasted":
-                    whz_risk_class = "status-danger"
-                elif whz_category in ("Wasted", "At Risk of Overweight", "Overweight"):
-                    whz_risk_class = "status-warning"
-                elif whz_category == "Obese":
-                    whz_risk_class = "status-danger"
+            if immunization_status == 'zero_dose':
+                clinical_score += 2
+                clinical_recs.append("Zero Dose Vaccination")
+            elif immunization_status == 'partially_immunized':
+                clinical_score += 1
+                clinical_recs.append("Partially Immunized")
+                
+            if chronic_illness == 'yes':
+                clinical_score += 1
+                clinical_recs.append("Chronic Illness (CHD, TB, CP)")
+                
+            if recurrent_diarrhea == 'yes':
+                clinical_score += 1
+                clinical_recs.append("Recurrent Diarrhea")
+                
+            if recent_illness == 'yes':
+                clinical_score += 1
+                clinical_recs.append("Recent Illness")
+
+            # Feeding Pillar
+            feeding_score = 0
+            feeding_recs = []
+            if ebf_duration < 2:
+                feeding_score += 2
+                feeding_recs.append("Suboptimal EBF (< 2 months)")
+            elif ebf_duration <= 5:
+                feeding_score += 1
+                feeding_recs.append("Early EBF Cessation (2-5 months)")
+                
+            if current_age >= 6:
+                if feeding_diversity < 5:
+                    feeding_score += 1
+                    feeding_recs.append(f"Inadequate Dietary Diversity ({feeding_diversity}/8 food groups)")
                 else:
-                    whz_risk_class = "status-normal"
-                
-                whz_val_str = f"{z_score:.2f}" if z_score is not None else "N/A"
-                
-                st.markdown(f"""
-                <div class="metric-container">
-                    <p class="label-text">📏 Weight-for-Height Z-Score</p>
-                    <div class="status-badge {whz_risk_class}">{whz_category}</div>
-                    <p style="margin-top: 15px; color: var(--text-muted); font-size: 0.9rem;">Value: <b style="color: var(--text-color); font-size: 1.2rem; font-weight: 800;">{whz_val_str} SD</b></p>
-                </div>""", unsafe_allow_html=True)
+                    feeding_recs.append(f"Adequate Dietary Diversity ({feeding_diversity}/8 food groups)")
+            else:
+                feeding_recs.append("Age-appropriate Breastfeeding")
+
+            # Socio-Economic Pillar
+            ses_pillar_score = 0
+            ses_recs = []
+            if ses_score_total <= 1:
+                ses_pillar_score += 2
+                ses_recs.append(f"Low SES ({ses_category_label})")
+            elif ses_score_total <= 3:
+                ses_pillar_score += 1
+                ses_recs.append(f"Middle SES ({ses_category_label})")
+            else:
+                ses_recs.append(f"High SES ({ses_category_label})")
+
+            # Total score
+            total_ivs = growth_score + clinical_score + feeding_score + ses_pillar_score
             
+            # Determine Final Risk Status, Box Color, and Recommendations
+            if z_score <= -3 or hiv_exposure == 'hiv_infected' or total_ivs >= 6 or (ml_risk is not None and "Severe" in ml_risk):
+                final_status = "🔴 CRITICAL CLINICAL RISK"
+                rec_class = "rec-critical"
+                final_action = "<b>ACTION: Immediate referral to therapeutic feeding program (SAM Clinic), pediatrician referral, and urgent medical investigation.</b>"
+            elif z_score <= -2 or (birth_weight < 2.5 and ses_score_total <= 1) or total_ivs >= 4 or (ml_risk is not None and "Moderate Malnutrition" in ml_risk):
+                final_status = "🔴 HIGH CLINICAL RISK"
+                rec_class = "rec-critical"
+                final_action = "<b>ACTION: Referral to supplementary feeding program, active pediatric growth monitoring, and nutritional counseling.</b>"
+            elif z_score <= -1 or total_ivs >= 2 or (ml_risk is not None and "High Risk" in ml_risk):
+                final_status = "🟠 MODERATE CLINICAL RISK"
+                rec_class = "rec-warning"
+                final_action = "<b>ACTION: Routine wellness follow-up, dietary diversity counseling, and WASH advice.</b>"
+            else:
+                final_status = "🟢 LOW CLINICAL RISK"
+                rec_class = "rec-success"
+                final_action = "<b>ACTION: General child health maintenance and continuation of healthy feeding practices.</b>"
+
+            # Build formatted HTML report content
+            rec_text = f"""
+            <div style="font-family: 'Inter', sans-serif;">
+                <p style="margin: 0 0 10px 0; font-size: 1.1rem; font-weight: bold;">
+                    📋 Integrated Clinical Assessment
+                </p>
+                <hr style="border: 0; border-top: 1px solid var(--metric-border); margin: 10px 0;">
+                <p style="margin: 0 0 10px 0; font-size: 1.05rem;">
+                    <b>Diagnostic Status:</b> 
+                    <span style="font-weight: bold; font-size: 1.1rem;">{final_status}</span>
+                </p>
+                <p style="margin: 0 0 15px 0; font-size: 0.92rem;">
+                    <b>Clinical Vulnerability Score (CVS):</b> <code>{total_ivs} points</code> 
+                    (Growth: {growth_score} | Clinical: {clinical_score} | Feeding: {feeding_score} | SES: {ses_pillar_score})
+                </p>
+                <div style="margin: 15px 0;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem; text-align: left; color: inherit;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid var(--metric-border);">
+                                <th style="padding: 6px; width: 35%;">Clinical Pillar</th>
+                                <th style="padding: 6px;">Evaluated Findings</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="border-bottom: 1px solid var(--metric-border);">
+                                <td style="padding: 6px; font-weight: bold;">1. 📏 Growth Profile</td>
+                                <td style="padding: 6px;">{", ".join(growth_recs) if growth_recs else "No growth deficits"} <br><span style="font-size:0.8rem; color: var(--text-muted);">({trajectory_status})</span></td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid var(--metric-border);">
+                                <td style="padding: 6px; font-weight: bold;">2. 🩺 Clinical & Health</td>
+                                <td style="padding: 6px;">{", ".join(clinical_recs) if clinical_recs else "No clinical risks identified"}</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid var(--metric-border);">
+                                <td style="padding: 6px; font-weight: bold;">3. 🍲 Feeding Practices</td>
+                                <td style="padding: 6px;">{", ".join(feeding_recs) if feeding_recs else "Age-appropriate feeding"}</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid var(--metric-border);">
+                                <td style="padding: 6px; font-weight: bold;">4. 🏡 Socio-Economic</td>
+                                <td style="padding: 6px;">{", ".join(ses_recs) if ses_recs else "Low environmental vulnerability"}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p style="margin: 15px 0 0 0; font-size: 1.0rem; line-height: 1.4;">
+                    {final_action}
+                </p>
+            </div>
+            """
+                    
+            if whz_category in ("Severe Acute Malnutrition", "Obese", "High Risk"):
+                whz_risk_class = "status-danger"
+            elif whz_category in ("Moderate Acute Malnutrition", "Moderate Risk"):
+                whz_risk_class = "status-warning"
+            else:
+                whz_risk_class = "status-normal"
+
+            st.session_state.assessment_results = {
+                'subject_id': subject_id_input,
+                'age_months': current_age,
+                'gender': gender,
+                'birth_weight': birth_weight,
+                'weight': current_weight,
+                'height': current_height,
+                'recent_illness': recent_illness,
+                'chronic_illness': chronic_illness,
+                'immunization_status': immunization_status,
+                'feeding_practice': "Mixed Feeding" if feeding_diversity > 3 else "Complementary Feeding" if current_age >= 6 else "Exclusive Breastfeeding",
+                'household_income_level': income_level,
+                'parent_education_level': education_level,
+                'access_to_clean_water': water_access,
+                'sanitation_access': sanitation_access,
+                'hiv_exposure': hiv_exposure,
+                'recurrent_diarrhea': recurrent_diarrhea,
+                'exclusive_breastfeeding_6m': breastfeeding_6m,
+                'feeding_diversity_score': feeding_diversity,
+                'ses_score': ses_score_total,
+                'z_score': z_score,
+                'whz_category': whz_category,
+                'trajectory_data': trajectory_list,
+                'ml_risk': ml_risk,
+                'ml_confidence': prob,
+                'risk_factors': risk_factors,
+                'contributing_factors': contributing_factors,
+                'rec_text': rec_text,
+                'rec_class': rec_class,
+                'whz_risk_class': whz_risk_class,
+                'ml_class': ml_class,
+                'bar_color': bar_color
+            }
+
+            # Auto-save to Supabase on every analysis run
+            if sb_url and sb_key:
+                import database as db
+                
+                # Save Current Visit
+                payload = {
+                    "subject_id": subject_id_input,
+                    "created_at": current_date.isoformat(),
+                    "age_months": int(current_age),
+                    "gender": gender,
+                    "birth_weight": float(birth_weight),
+                    "weight": float(current_weight),
+                    "height": float(current_height),
+                    "recent_illness": recent_illness,
+                    "chronic_illness": chronic_illness,
+                    "immunization_status": immunization_status,
+                    "feeding_practice": "Mixed Feeding" if feeding_diversity > 3 else "Complementary Feeding" if current_age >= 6 else "Exclusive Breastfeeding",
+                    "household_income_level": income_level,
+                    "parent_education_level": education_level,
+                    "access_to_clean_water": water_access,
+                    "sanitation_access": sanitation_access,
+                    "hiv_exposure": hiv_exposure,
+                    "recurrent_diarrhea": recurrent_diarrhea,
+                    "exclusive_breastfeeding_6m": breastfeeding_6m,
+                    "feeding_diversity_score": int(feeding_diversity),
+                    "ses_score": int(ses_score_total),
+                    "z_score": float(z_score) if z_score is not None else None,
+                    "whz_category": whz_category,
+                    "ml_risk": ml_risk,
+                    "ml_confidence": float(prob)
+                }
+                success_curr, msg_curr = db.save_assessment(sb_url, sb_key, payload)
+                
+                # Save Past Visit 1
+                success_p1, success_p2 = True, True
+                if include_past1:
+                    past1_whz, past1_cat = calculate_whz(past1_height, past1_weight, gender)
+                    past1_payload = {
+                        "subject_id": subject_id_input,
+                        "created_at": past1_date.isoformat(),
+                        "age_months": int(past1_age),
+                        "gender": gender,
+                        "birth_weight": float(birth_weight),
+                        "weight": float(past1_weight),
+                        "height": float(past1_height),
+                        "recent_illness": "no",
+                        "chronic_illness": "no",
+                        "immunization_status": "age_appropriate",
+                        "feeding_practice": "Exclusive Breastfeeding" if past1_age < 6 else "Complementary Feeding",
+                        "household_income_level": income_level,
+                        "parent_education_level": education_level,
+                        "access_to_clean_water": water_access,
+                        "sanitation_access": sanitation_access,
+                        "hiv_exposure": hiv_exposure,
+                        "recurrent_diarrhea": "no",
+                        "exclusive_breastfeeding_6m": breastfeeding_6m,
+                        "feeding_diversity_score": 0,
+                        "ses_score": int(ses_score_total),
+                        "z_score": float(past1_whz) if past1_whz is not None else None,
+                        "whz_category": past1_cat,
+                        "ml_risk": None,
+                        "ml_confidence": None
+                    }
+                    success_p1, msg_p1 = db.save_assessment(sb_url, sb_key, past1_payload)
+                    
+                # Save Past Visit 2
+                if include_past2:
+                    past2_whz, past2_cat = calculate_whz(past2_height, past2_weight, gender)
+                    past2_payload = {
+                        "subject_id": subject_id_input,
+                        "created_at": past2_date.isoformat(),
+                        "age_months": int(past2_age),
+                        "gender": gender,
+                        "birth_weight": float(birth_weight),
+                        "weight": float(past2_weight),
+                        "height": float(past2_height),
+                        "recent_illness": "no",
+                        "chronic_illness": "no",
+                        "immunization_status": "age_appropriate",
+                        "feeding_practice": "Exclusive Breastfeeding" if past2_age < 6 else "Complementary Feeding",
+                        "household_income_level": income_level,
+                        "parent_education_level": education_level,
+                        "access_to_clean_water": water_access,
+                        "sanitation_access": sanitation_access,
+                        "hiv_exposure": hiv_exposure,
+                        "recurrent_diarrhea": "no",
+                        "exclusive_breastfeeding_6m": breastfeeding_6m,
+                        "feeding_diversity_score": 0,
+                        "ses_score": int(ses_score_total),
+                        "z_score": float(past2_whz) if past2_whz is not None else None,
+                        "whz_category": past2_cat,
+                        "ml_risk": None,
+                        "ml_confidence": None
+                    }
+                    success_p2, msg_p2 = db.save_assessment(sb_url, sb_key, past2_payload)
+                    
+                if success_curr and success_p1 and success_p2:
+                    saved_msg = "Current visit saved!"
+                    if include_past1 and include_past2:
+                        saved_msg = "Current and both past visits saved successfully to Supabase!"
+                    elif include_past1 or include_past2:
+                        saved_msg = "Current and past visit saved successfully to Supabase!"
+                    st.toast(saved_msg, icon="💾")
+                else:
+                    errs = []
+                    if not success_curr: errs.append(f"Current: {msg_curr}")
+                    if not success_p1: errs.append(f"Past 1: {msg_p1}")
+                    if not success_p2: errs.append(f"Past 2: {msg_p2}")
+                    st.error("Failed to auto-save some/all records: " + " | ".join(errs))
+
+        with right_col:
+            st.subheader("📊 Clinical Assessment Results")
+            
+            if st.session_state.assessment_results is not None:
+                res = st.session_state.assessment_results
+                
+                r1_col1, r1_col2 = st.columns(2)
+                with r1_col1:
+                    st.markdown(f"""
+                    <div class="metric-container">
+                        <p class="label-text">🤖 Trend Prediction</p>
+                        <div class="status-badge {res['ml_class']}">{res['ml_risk']}</div>
+                        <p style="margin-top: 15px; color: var(--text-muted); font-size: 0.9rem;">Confidence: <b style="color: var(--text-color); font-size: 1.2rem; font-weight: 800;">{res['ml_confidence']:.1%}</b></p>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" style="width: {res['ml_confidence']*100}%; background-color: {res['bar_color']};"></div>
+                          </div>
+                      </div>""", unsafe_allow_html=True)
+                      
+                    st.markdown(f"""<div class="rec-box {res['rec_class']}" style="margin-top: 10px; padding: 15px;">{res['rec_text']}</div>""", unsafe_allow_html=True)
+                with r1_col2:
+                    whz_val_str = f"{res['z_score']:.2f}" if res['z_score'] is not None else "N/A"
+                    whz_status_str = "Malnourished" if res['z_score'] is not None and res['z_score'] <= -2.0 else "Not Malnutritioned"
+                    
+                    st.markdown(f"""
+                    <div class="metric-container">
+                        <p class="label-text">📏 Weight-for-Height Z-Score</p>
+                        <div class="status-badge {res['whz_risk_class']}">{whz_status_str}</div>
+                        <p style="margin-top: 15px; color: var(--text-muted); font-size: 0.9rem;">Value: <b style="color: var(--text-color); font-size: 1.2rem; font-weight: 800;">{whz_val_str} SD</b></p>
+                    </div>""", unsafe_allow_html=True)
+                
+                # --- 6. Trajectory of the Z-Score ---
+                st.markdown("---")
+                st.markdown("### 📈 Weight-for-Height Z-Score Trajectory")
+                
+                # Fetch all records for this subject from Supabase to show full history, if connected
+                db_records = []
+                if sb_url and sb_key:
+                    try:
+                        import database as db
+                        db_records = db.get_assessments_by_subject(sb_url, sb_key, res['subject_id'])
+                    except Exception as e:
+                        pass
+                
+                if db_records:
+                    trajectory_df = pd.DataFrame(db_records)
+                    trajectory_df = trajectory_df.sort_values(by="age_months").drop_duplicates(subset=["age_months"])
+                else:
+                    trajectory_df = pd.DataFrame(res.get('trajectory_data', []))
+                    if not trajectory_df.empty:
+                        trajectory_df = trajectory_df.sort_values(by="age_months").drop_duplicates(subset=["age_months"])
+                
+                if not trajectory_df.empty and len(trajectory_df) > 1:
+                    # Plot Z-score trajectory with critical regions (interactive Altair chart)
+                    chart = plot_whz_trajectory_with_regions(trajectory_df)
+                    st.altair_chart(chart, use_container_width=True)
+                    
+                    # Clinical trajectory assessment
+                    # Sort trajectory_df to ensure first and last visits are chronologically correct
+                    trajectory_df_sorted = trajectory_df.sort_values(by="age_months")
+                    first_visit = trajectory_df_sorted.iloc[0]
+                    last_visit = trajectory_df_sorted.iloc[-1]
+                    z_diff = last_visit['z_score'] - first_visit['z_score']
+                    
+                    if z_diff > 0.2:
+                        traj_status = "Improving 📈"
+                        traj_class = "status-normal"
+                        traj_note = f"The child's WHZ has improved by **+{z_diff:.2f} SD** (from {first_visit['z_score']:.2f} SD to {last_visit['z_score']:.2f} SD)."
+                    elif z_diff < -0.2:
+                        traj_status = "Deteriorating 📉"
+                        traj_class = "status-danger"
+                        traj_note = f"The child's WHZ has declined by **{z_diff:.2f} SD** (from {first_visit['z_score']:.2f} SD to {last_visit['z_score']:.2f} SD). Immediate intervention is advised."
+                    else:
+                        traj_status = "Stable ➡️"
+                        traj_class = "status-warning"
+                        traj_note = f"The child's growth is stable with a WHZ change of **{z_diff:+.2f} SD** (current: {last_visit['z_score']:.2f} SD)."
+                        
+                    st.markdown(f"""
+                    <div style="background-color: var(--card-bg); border: 1px solid var(--metric-border); padding: 15px; border-radius: 8px; margin-top: 10px;">
+                        <p style="margin: 0; font-size: 0.95rem; line-height: 1.5;">
+                            <b>Trajectory Status:</b> <span class="status-badge {traj_class}" style="margin: 0 0 0 5px; padding: 2px 10px; font-size: 0.85rem;">{traj_status}</span><br><br>
+                            {traj_note}
+                        </p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.info("ℹ&nbsp; Trajectory chart requires at least two visits. Add past visits or run subsequent assessments for this subject to view trajectory.")
+                
+                # Auto-saved status indicator
+                if sb_url and sb_key:
+                    st.markdown("---")
+                    st.success("✅ Assessment automatically saved to Supabase database.")
+                else:
+                    st.markdown("---")
+                    st.info("💡 Connect to Supabase in the sidebar to enable automatic assessment saving.")
+            else:
+                st.info("👈 Please enter the current measurements and click Analyze.")
+
+    elif app_mode == "📂 History & Growth Trends":
+        st.subheader("📂 Historical Records & Growth Trends")
+        
+        if not sb_url or not sb_key:
+            st.warning("⚠️ Database connection is not configured. Please enter your Supabase URL and Key in the sidebar to view history.")
         else:
-            st.info("👈 Please enter the current measurements and click Analyze.")
+            with st.spinner("Fetching assessment records from Supabase..."):
+                import database as db
+                all_records = db.get_all_assessments(sb_url, sb_key)
+                
+            if not all_records:
+                st.info("ℹ️ No assessment records found in the database. Perform an assessment and save it to see historical data.")
+            else:
+                # Convert records to DataFrame
+                df_records = pd.DataFrame(all_records)
+                
+                # Format timestamps/dates nicely
+                if "created_at" in df_records.columns:
+                    df_records["created_at"] = pd.to_datetime(df_records["created_at"]).dt.strftime("%Y-%m-%d %H:%M:%S")
+                
+                st.markdown("### 🔍 Subject Selection")
+                unique_subjects = sorted(list(df_records["subject_id"].unique()))
+                selected_subject = st.selectbox("Select Subject (Subject ID):", ["-- Show All Records --"] + unique_subjects)
+                
+                if selected_subject == "-- Show All Records --":
+                    st.markdown("#### All Assessments")
+                    display_cols = [col for col in ["subject_id", "created_at", "age_months", "gender", "weight", "height", "z_score", "whz_category", "ml_risk", "ml_confidence"] if col in df_records.columns]
+                    st.dataframe(df_records[display_cols], use_container_width=True)
+                else:
+                    subject_data = df_records[df_records["subject_id"] == selected_subject].sort_values(by="age_months")
+                    
+                    st.markdown(f"### 📊 Historical Trends for Subject: **{selected_subject}**")
+                    
+                    latest_rec = subject_data.iloc[-1]
+                    
+                    c_age, c_weight, c_height, c_whz = st.columns(4)
+                    c_age.metric("Current Age", f"{latest_rec['age_months']} months")
+                    c_weight.metric("Current Weight", f"{latest_rec['weight']} kg")
+                    c_height.metric("Current Height", f"{latest_rec['height']} cm")
+                    
+                    z_val = latest_rec['z_score']
+                    z_str = f"{z_val:.2f} SD" if z_val is not None else "N/A"
+                    whz_status_hist = "Malnourished" if z_val is not None and z_val <= -2.0 else "Not Malnutritioned"
+                    c_whz.metric("Weight-for-Height Z-Score", z_str, delta=whz_status_hist)
+                    
+                    # Graphing columns
+                    st.markdown("#### Growth Trajectories")
+                    chart_col1, chart_col2 = st.columns(2)
+                    
+                    with chart_col1:
+                        st.markdown("<p style='font-weight:600; text-align:center;'>⚖️ Weight Trajectory (kg)</p>", unsafe_allow_html=True)
+                        st.line_chart(data=subject_data, x="age_months", y="weight")
+                        
+                    with chart_col2:
+                        st.markdown("<p style='font-weight:600; text-align:center;'>📏 Z-Score (WHZ) Trajectory (SD)</p>", unsafe_allow_html=True)
+                        chart_hist = plot_whz_trajectory_with_regions(subject_data)
+                        st.altair_chart(chart_hist, use_container_width=True)
+                        
+                    # Detailed History Table for this child
+                    st.markdown("#### Visit Details")
+                    detail_cols = [col for col in ["created_at", "age_months", "weight", "height", "z_score", "whz_category", "ml_risk", "ml_confidence", "feeding_practice", "recent_illness", "chronic_illness"] if col in subject_data.columns]
+                    st.dataframe(subject_data[detail_cols], use_container_width=True)
