@@ -342,6 +342,43 @@ st.markdown(f"""
         border-radius: 10px;
         transition: width 0.5s ease-in-out;
     }}
+
+    /* Mobile Responsive Optimizations */
+    @media (max-width: 768px) {{
+        /* Force columns to stack vertically on phone screens */
+        [data-testid="column"] {{
+            width: 100% !important;
+            flex: 1 1 100% !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            margin-bottom: 12px !important;
+        }}
+        
+        /* Scale down headings for mobile viewports */
+        h1 {{
+            font-size: 1.5rem !important;
+        }}
+        h2 {{
+            font-size: 1.25rem !important;
+        }}
+        h3 {{
+            font-size: 1.1rem !important;
+        }}
+        
+        /* Reduce padding inside metric cards and recommendation boxes */
+        .metric-container {{
+            padding: 15px !important;
+            margin-bottom: 12px !important;
+        }}
+        .status-badge {{
+            font-size: 0.85rem !important;
+            padding: 4px 12px !important;
+        }}
+        .rec-box {{
+            padding: 12px !important;
+            margin-top: 8px !important;
+        }}
+    }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -358,32 +395,66 @@ app_mode = st.sidebar.radio(
     label_visibility="collapsed"
 )
 
-# Load Supabase config from secrets if available
-sb_url = st.secrets.get("SUPABASE_URL", "")
-sb_key = st.secrets.get("SUPABASE_KEY", "")
+# --- 3. Database Connection (Set directly in source code) ---
+# Replace the placeholders below with your Supabase credentials to enable saving assessments
+SUPABASE_URL = "https://your-project.supabase.co"
+SUPABASE_KEY = "your-anon-key"
 
-# Clean up default secrets.toml placeholders
-if sb_url == "https://your-project.supabase.co" or not sb_url:
+# Fallback to streamlit secrets if not set above
+sb_url = SUPABASE_URL if SUPABASE_URL and SUPABASE_URL != "https://your-project.supabase.co" else st.secrets.get("SUPABASE_URL", "")
+sb_key = SUPABASE_KEY if SUPABASE_KEY and SUPABASE_KEY != "your-anon-key" else st.secrets.get("SUPABASE_KEY", "")
+
+# Clean up default placeholders
+if sb_url == "https://your-project.supabase.co":
     sb_url = ""
-if sb_key == "your-anon-key" or not sb_key:
+if sb_key == "your-anon-key":
     sb_key = ""
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("🔌 Database Connection")
 
-if not sb_url or not sb_key:
-    st.sidebar.warning("Supabase credentials not found in secrets. Configure below:")
-    sb_url_input = st.sidebar.text_input("Supabase URL", value="", placeholder="https://xyz.supabase.co")
-    sb_key_input = st.sidebar.text_input("Supabase Anon Key", value="", type="password", placeholder="eyJhbGciOiJIUzI1NiIsIn...")
-    
-    if sb_url_input and sb_key_input:
-        sb_url = sb_url_input.strip()
-        sb_key = sb_key_input.strip()
-        st.sidebar.success("Connected for this session!")
-    else:
-        st.sidebar.info("Running in offline mode (Saving disabled).")
+if sb_url and sb_key:
+    st.sidebar.success("Connected to Supabase")
 else:
-    st.sidebar.success("Connected via secrets.toml")
+    st.sidebar.info("Offline Mode (Saving disabled)")
+
+def get_unique_subject_id():
+    """Generates a random 4-character ID (1 letter, 3 numbers) and ensures it is unique in Supabase."""
+    import random
+    import string
+    import requests
+    
+    # If offline, generate a simple random ID
+    if not sb_url or not sb_key:
+        l = random.choice(string.ascii_uppercase)
+        d = "".join(random.choice(string.digits) for _ in range(3))
+        return f"{l}{d}"
+        
+    headers = {
+        "apikey": sb_key,
+        "Authorization": f"Bearer {sb_key}",
+        "Content-Type": "application/json"
+    }
+    
+    # Try up to 100 times to find a unique ID
+    for _ in range(100):
+        l = random.choice(string.ascii_uppercase)
+        d = "".join(random.choice(string.digits) for _ in range(3))
+        candidate_id = f"{l}{d}"
+        
+        endpoint = f"{sb_url.rstrip('/')}/rest/v1/assessments?subject_id=eq.{candidate_id}&select=subject_id"
+        try:
+            response = requests.get(endpoint, headers=headers)
+            if response.status_code == 200:
+                if len(response.json()) == 0:
+                    return candidate_id
+        except Exception:
+            pass
+            
+    # Fallback if checks failed
+    l = random.choice(string.ascii_uppercase)
+    d = "".join(random.choice(string.digits) for _ in range(3))
+    return f"{l}{d}"
 
 # --- 4. Header ---
 head_col, tog_col = st.columns([6, 1])
@@ -411,7 +482,18 @@ else:
             st.subheader("📝 Subject Assessment")
             
             with st.expander("1. 📏 Growth Metrics (Current & Past History)", expanded=True):
-                subject_id_input = st.text_input("Subject ID", value="S001", help="Enter a unique identifier for the subject.")
+                if 'generated_subject_id' not in st.session_state:
+                    st.session_state.generated_subject_id = get_unique_subject_id()
+                
+                c_sid1, c_sid2 = st.columns([3, 1])
+                with c_sid1:
+                    subject_id_input = st.text_input("Subject ID (Auto-generated)", value=st.session_state.generated_subject_id, disabled=True, help="Automatically generated unique ID for this child.")
+                with c_sid2:
+                    st.write("") # spacing
+                    st.write("")
+                    if st.button("🔄 New ID", help="Generate a new subject ID for a different child"):
+                        st.session_state.generated_subject_id = get_unique_subject_id()
+                        st.rerun()
                 c1, c2 = st.columns(2)
                 with c1: gender = st.selectbox("Gender", ["Male", "Female"])
                 with c2: current_age = st.number_input("Age (months)", 0, 59, 24)
@@ -1037,7 +1119,7 @@ else:
             if sb_url and sb_key:
                 import database as db
                 
-                # Save Current Visit
+                # Build single-row payload containing current and optional past visits
                 payload = {
                     "subject_id": subject_id_input,
                     "created_at": current_date.isoformat(),
@@ -1062,86 +1144,26 @@ else:
                     "z_score": float(z_score) if z_score is not None else None,
                     "whz_category": whz_category,
                     "ml_risk": ml_risk,
-                    "ml_confidence": float(prob)
+                    "ml_confidence": float(prob),
+                    # Past Visit 1 Columns
+                    "past1_age_months": int(past1_age) if include_past1 else None,
+                    "past1_weight": float(past1_weight) if include_past1 else None,
+                    "past1_height": float(past1_height) if include_past1 else None,
+                    "past1_z_score": float(calculate_whz(past1_height, past1_weight, gender)[0]) if include_past1 else None,
+                    # Past Visit 2 Columns
+                    "past2_age_months": int(past2_age) if include_past2 else None,
+                    "past2_weight": float(past2_weight) if include_past2 else None,
+                    "past2_height": float(past2_height) if include_past2 else None,
+                    "past2_z_score": float(calculate_whz(past2_height, past2_weight, gender)[0]) if include_past2 else None,
                 }
-                success_curr, msg_curr = db.save_assessment(sb_url, sb_key, payload)
                 
-                # Save Past Visit 1
-                success_p1, success_p2 = True, True
-                if include_past1:
-                    past1_whz, past1_cat = calculate_whz(past1_height, past1_weight, gender)
-                    past1_payload = {
-                        "subject_id": subject_id_input,
-                        "created_at": past1_date.isoformat(),
-                        "age_months": int(past1_age),
-                        "gender": gender,
-                        "birth_weight": float(birth_weight),
-                        "weight": float(past1_weight),
-                        "height": float(past1_height),
-                        "recent_illness": "no",
-                        "chronic_illness": "no",
-                        "immunization_status": "age_appropriate",
-                        "feeding_practice": "Exclusive Breastfeeding" if past1_age < 6 else "Complementary Feeding",
-                        "household_income_level": income_level,
-                        "parent_education_level": education_level,
-                        "access_to_clean_water": water_access,
-                        "sanitation_access": sanitation_access,
-                        "hiv_exposure": hiv_exposure,
-                        "recurrent_diarrhea": "no",
-                        "exclusive_breastfeeding_6m": breastfeeding_6m,
-                        "feeding_diversity_score": 0,
-                        "ses_score": int(ses_score_total),
-                        "z_score": float(past1_whz) if past1_whz is not None else None,
-                        "whz_category": past1_cat,
-                        "ml_risk": None,
-                        "ml_confidence": None
-                    }
-                    success_p1, msg_p1 = db.save_assessment(sb_url, sb_key, past1_payload)
-                    
-                # Save Past Visit 2
-                if include_past2:
-                    past2_whz, past2_cat = calculate_whz(past2_height, past2_weight, gender)
-                    past2_payload = {
-                        "subject_id": subject_id_input,
-                        "created_at": past2_date.isoformat(),
-                        "age_months": int(past2_age),
-                        "gender": gender,
-                        "birth_weight": float(birth_weight),
-                        "weight": float(past2_weight),
-                        "height": float(past2_height),
-                        "recent_illness": "no",
-                        "chronic_illness": "no",
-                        "immunization_status": "age_appropriate",
-                        "feeding_practice": "Exclusive Breastfeeding" if past2_age < 6 else "Complementary Feeding",
-                        "household_income_level": income_level,
-                        "parent_education_level": education_level,
-                        "access_to_clean_water": water_access,
-                        "sanitation_access": sanitation_access,
-                        "hiv_exposure": hiv_exposure,
-                        "recurrent_diarrhea": "no",
-                        "exclusive_breastfeeding_6m": breastfeeding_6m,
-                        "feeding_diversity_score": 0,
-                        "ses_score": int(ses_score_total),
-                        "z_score": float(past2_whz) if past2_whz is not None else None,
-                        "whz_category": past2_cat,
-                        "ml_risk": None,
-                        "ml_confidence": None
-                    }
-                    success_p2, msg_p2 = db.save_assessment(sb_url, sb_key, past2_payload)
-                    
-                if success_curr and success_p1 and success_p2:
-                    saved_msg = "Current visit saved!"
-                    if include_past1 and include_past2:
-                        saved_msg = "Current and both past visits saved successfully to Supabase!"
-                    elif include_past1 or include_past2:
-                        saved_msg = "Current and past visit saved successfully to Supabase!"
-                    st.toast(saved_msg, icon="💾")
+                success_curr, msg_curr = db.save_assessment(sb_url, sb_key, payload)
+                if success_curr:
+                    st.toast("Assessment saved successfully to Supabase!", icon="💾")
+                    # Regenerate a new subject ID for the next assessment
+                    st.session_state.generated_subject_id = get_unique_subject_id()
                 else:
-                    errs = []
-                    if not success_curr: errs.append(f"Current: {msg_curr}")
-                    if not success_p1: errs.append(f"Past 1: {msg_p1}")
-                    if not success_p2: errs.append(f"Past 2: {msg_p2}")
-                    st.error("Failed to auto-save some/all records: " + " | ".join(errs))
+                    st.error(f"Failed to auto-save record: {msg_curr}")
 
         with right_col:
             st.subheader("📊 Clinical Assessment Results")
@@ -1187,7 +1209,46 @@ else:
                         pass
                 
                 if db_records:
-                    trajectory_df = pd.DataFrame(db_records)
+                    latest_rec = db_records[-1] # Ordered by id ASC, so the last is latest
+                    trajectory_list = []
+                    
+                    # Current
+                    trajectory_list.append({
+                        "age_months": int(latest_rec['age_months']),
+                        "weight": float(latest_rec['weight']),
+                        "height": float(latest_rec['height']),
+                        "z_score": float(latest_rec['z_score']) if latest_rec.get('z_score') is not None else None,
+                        "whz_category": latest_rec.get('whz_category', 'Normal'),
+                        "visit_label": "Current"
+                    })
+                    
+                    # Past Visit 1
+                    if latest_rec.get('past1_age_months') is not None:
+                        past1_whz = latest_rec.get('past1_z_score')
+                        _, past1_cat = calculate_whz(latest_rec['past1_height'], latest_rec['past1_weight'], latest_rec['gender'])
+                        trajectory_list.append({
+                            "age_months": int(latest_rec['past1_age_months']),
+                            "weight": float(latest_rec['past1_weight']),
+                            "height": float(latest_rec['past1_height']),
+                            "z_score": float(past1_whz) if past1_whz is not None else None,
+                            "whz_category": past1_cat,
+                            "visit_label": "Past 1"
+                        })
+                        
+                    # Past Visit 2
+                    if latest_rec.get('past2_age_months') is not None:
+                        past2_whz = latest_rec.get('past2_z_score')
+                        _, past2_cat = calculate_whz(latest_rec['past2_height'], latest_rec['past2_weight'], latest_rec['gender'])
+                        trajectory_list.append({
+                            "age_months": int(latest_rec['past2_age_months']),
+                            "weight": float(latest_rec['past2_weight']),
+                            "height": float(latest_rec['past2_height']),
+                            "z_score": float(past2_whz) if past2_whz is not None else None,
+                            "whz_category": past2_cat,
+                            "visit_label": "Past 2"
+                        })
+                        
+                    trajectory_df = pd.DataFrame(trajectory_list)
                     trajectory_df = trajectory_df.sort_values(by="age_months").drop_duplicates(subset=["age_months"])
                 else:
                     trajectory_df = pd.DataFrame(res.get('trajectory_data', []))
@@ -1289,14 +1350,55 @@ else:
                     st.markdown("#### Growth Trajectories")
                     chart_col1, chart_col2 = st.columns(2)
                     
+                    # Rebuild the full trajectory from the latest record's columns to support single-row past visits
+                    hist_traj_list = []
+                    # Current
+                    hist_traj_list.append({
+                        "age_months": int(latest_rec['age_months']),
+                        "weight": float(latest_rec['weight']),
+                        "height": float(latest_rec['height']),
+                        "z_score": float(latest_rec['z_score']) if latest_rec.get('z_score') is not None else None,
+                        "whz_category": latest_rec.get('whz_category', 'Normal'),
+                        "visit_label": "Current"
+                    })
+                    # Past 1
+                    if 'past1_age_months' in latest_rec and pd.notna(latest_rec['past1_age_months']):
+                        past1_whz = latest_rec.get('past1_z_score')
+                        _, past1_cat = calculate_whz(latest_rec['past1_height'], latest_rec['past1_weight'], latest_rec['gender'])
+                        hist_traj_list.append({
+                            "age_months": int(latest_rec['past1_age_months']),
+                            "weight": float(latest_rec['past1_weight']),
+                            "height": float(latest_rec['past1_height']),
+                            "z_score": float(past1_whz) if past1_whz is not None else None,
+                            "whz_category": past1_cat,
+                            "visit_label": "Past 1"
+                        })
+                    # Past 2
+                    if 'past2_age_months' in latest_rec and pd.notna(latest_rec['past2_age_months']):
+                        past2_whz = latest_rec.get('past2_z_score')
+                        _, past2_cat = calculate_whz(latest_rec['past2_height'], latest_rec['past2_weight'], latest_rec['gender'])
+                        hist_traj_list.append({
+                            "age_months": int(latest_rec['past2_age_months']),
+                            "weight": float(latest_rec['past2_weight']),
+                            "height": float(latest_rec['past2_height']),
+                            "z_score": float(past2_whz) if past2_whz is not None else None,
+                            "whz_category": past2_cat,
+                            "visit_label": "Past 2"
+                        })
+                    
+                    hist_traj_df = pd.DataFrame(hist_traj_list).sort_values(by="age_months").drop_duplicates(subset=["age_months"])
+                    
                     with chart_col1:
                         st.markdown("<p style='font-weight:600; text-align:center;'>⚖️ Weight Trajectory (kg)</p>", unsafe_allow_html=True)
-                        st.line_chart(data=subject_data, x="age_months", y="weight")
+                        st.line_chart(data=hist_traj_df, x="age_months", y="weight")
                         
                     with chart_col2:
                         st.markdown("<p style='font-weight:600; text-align:center;'>📏 Z-Score (WHZ) Trajectory (SD)</p>", unsafe_allow_html=True)
-                        chart_hist = plot_whz_trajectory_with_regions(subject_data)
-                        st.altair_chart(chart_hist, use_container_width=True)
+                        if len(hist_traj_df) > 1:
+                            chart_hist = plot_whz_trajectory_with_regions(hist_traj_df)
+                            st.altair_chart(chart_hist, use_container_width=True)
+                        else:
+                            st.info("ℹ️ Trajectory chart requires at least two visits.")
                         
                     # Detailed History Table for this child
                     st.markdown("#### Visit Details")

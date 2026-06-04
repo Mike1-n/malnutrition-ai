@@ -27,9 +27,49 @@ CREATE TABLE IF NOT EXISTS assessments (
   z_score NUMERIC,
   whz_category TEXT,
   ml_risk TEXT,
-  ml_confidence NUMERIC
+  ml_confidence NUMERIC,
+  past1_age_months INT2,
+  past1_weight NUMERIC,
+  past1_height NUMERIC,
+  past1_z_score NUMERIC,
+  past2_age_months INT2,
+  past2_weight NUMERIC,
+  past2_height NUMERIC,
+  past2_z_score NUMERIC
 );
 
 -- Indexes for performance on common lookups
 CREATE INDEX IF NOT EXISTS idx_assessments_subject_id ON assessments(subject_id);
 CREATE INDEX IF NOT EXISTS idx_assessments_created_at ON assessments(created_at DESC);
+
+-- Clean up duplicate visits before adding unique constraint (keeping only the latest visit by ID)
+DELETE FROM assessments a USING assessments b
+WHERE a.id < b.id 
+  AND a.subject_id = b.subject_id 
+  AND a.age_months = b.age_months;
+
+-- Add unique constraint to enable upsert behavior (merging duplicates by subject_id + age_months)
+ALTER TABLE assessments DROP CONSTRAINT IF EXISTS unique_subject_age;
+ALTER TABLE assessments ADD CONSTRAINT unique_subject_age UNIQUE (subject_id, age_months);
+
+-- Data Migration: Update existing records to new risk labels
+UPDATE assessments 
+SET ml_risk = 'High Risk' 
+WHERE ml_risk = 'Not Malnourished - High Risk';
+
+UPDATE assessments 
+SET ml_risk = 'Moderate Risk' 
+WHERE ml_risk = 'Not Malnourished - Moderate Risk';
+
+UPDATE assessments 
+SET ml_risk = 'Low Risk' 
+WHERE ml_risk = 'Not Malnourished - Low Risk';
+
+-- Enable Row Level Security and add policies for anonymous read/write access
+ALTER TABLE assessments ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow anonymous select" ON assessments;
+CREATE POLICY "Allow anonymous select" ON assessments FOR SELECT TO public USING (true);
+
+DROP POLICY IF EXISTS "Allow anonymous insert" ON assessments;
+CREATE POLICY "Allow anonymous insert" ON assessments FOR INSERT TO public WITH CHECK (true);

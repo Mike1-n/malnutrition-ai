@@ -11,7 +11,7 @@ def get_headers(key):
 
 def save_assessment(url, key, data):
     """
-    Saves an assessment record to the Supabase database.
+    Saves or updates an assessment record in the Supabase database.
     
     url: The Supabase project URL.
     key: The Supabase anon/service_role key.
@@ -20,8 +20,10 @@ def save_assessment(url, key, data):
     Returns (success: bool, message: str)
     """
     endpoint = f"{url.rstrip('/')}/rest/v1/assessments"
+    headers = get_headers(key)
+    headers["Prefer"] = "resolution=merge-duplicates"
     try:
-        response = requests.post(endpoint, headers=get_headers(key), json=data)
+        response = requests.post(endpoint, headers=headers, json=data)
         response.raise_for_status()
         return True, "Assessment saved successfully to Supabase!"
     except requests.exceptions.HTTPError as e:
