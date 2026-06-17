@@ -1011,6 +1011,9 @@ else:
                 elif z_score >= 3:
                     growth_score += 2
                     growth_recs.append("Obesity (WHZ ≥ 3 SD)")
+                elif z_score >= 2:
+                    growth_score += 1
+                    growth_recs.append("Overweight / Risk of Obesity (WHZ ≥ 2 SD)")
                 else:
                     growth_recs.append("Normal WHZ Score")
             
