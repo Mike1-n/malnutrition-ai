@@ -349,12 +349,60 @@ st.markdown(f"""
         color: var(--text-color) !important;
     }}
     
-    /* Expander Styling */
+    /* Premium Expander Card Styling */
+    [data-testid="stExpander"] {{
+        border: 1.5px solid var(--metric-border) !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+        background-color: var(--card-bg) !important;
+        margin-bottom: 20px !important;
+        overflow: hidden !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }}
+    
+    [data-testid="stExpander"]:hover {{
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1) !important;
+        border-color: var(--primary-color) !important;
+    }}
+
+    [data-testid="stExpander"] details {{
+        border: none !important;
+        background-color: transparent !important;
+    }}
+    
     .streamlit-expanderHeader {{
-        background-color: var(--card-bg); /* Dark background */
-        border-radius: 8px;
-        font-weight: 600;
-        color: var(--primary-color);
+        background-color: transparent !important;
+        border: none !important;
+        color: var(--primary-color) !important;
+        font-weight: 700 !important;
+    }}
+    
+    .streamlit-expanderContent,
+    [data-testid="stExpander"] details > div:not([role="button"]) {{
+        border-top: 1px solid var(--metric-border) !important;
+        background-color: transparent !important;
+    }}
+    
+    /* Visible borders and focus highlights for entry fields */
+    div[data-testid="stTextInput"] input,
+    div[data-testid="stNumberInput"] input,
+    div[data-testid="stDateInput"] input,
+    div[data-baseweb="select"] {{
+        border: 1.5px solid var(--metric-border) !important;
+        border-radius: 8px !important;
+        background-color: var(--background-color) !important;
+        color: var(--text-color) !important;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+    }}
+    
+    div[data-testid="stTextInput"] input:focus,
+    div[data-testid="stNumberInput"] input:focus,
+    div[data-testid="stDateInput"] input:focus,
+    div[data-baseweb="select"]:focus-within {{
+        border-color: var(--primary-color) !important;
+        box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2) !important;
+        outline: none !important;
     }}
     
     /* Progress Bar */
@@ -674,7 +722,7 @@ else:
                 subject_id_input = st.text_input("Subject ID (Auto-generated)", value=st.session_state.generated_subject_id, disabled=True, help="Automatically generated unique ID for this child.")
                 c1, c2 = st.columns(2)
                 with c1: gender = st.selectbox("Gender", ["Male", "Female"])
-                with c2: current_age = st.number_input("Age (months)", 0, 60, 24)
+                with c2: current_age = st.number_input("Age (months)", 3, 60, 24)
                 
                 c3, c4 = st.columns(2)
                 with c3: birth_weight = st.number_input("Birth Weight (kg)", 0.5, 6.0, 3.0, step=0.1)
@@ -758,12 +806,12 @@ else:
                     recurrent_diarrhea = "no" # Removed from UI, hardcoded to maintain model compatibility
                     chronic_illness = st.selectbox("Chronic Illness? (CHD, TB, CP)", ["yes", "no"], index=1)
                 with col_b:
-                    hiv_options = ["HIV Unexposed", "HIV Exposed Unaffected", "HIV Infected"]
+                    hiv_options = ["HIV Unexposed", "HIV Exposed Uninfected", "HIV Infected"]
                     hiv_label = st.selectbox("HIV Status", hiv_options, index=0)
                     
                     hiv_map = {
                         "HIV Unexposed": "hiv_unexposed",
-                        "HIV Exposed Unaffected": "hiv_exposed_unaffected",
+                        "HIV Exposed Uninfected": "hiv_exposed_unaffected",
                         "HIV Infected": "hiv_infected"
                     }
                     hiv_exposure = hiv_map[hiv_label]
@@ -848,7 +896,7 @@ else:
                 sanitation_access = "no" if (income_level == "low" or crowding_score == 0) else "yes"
                 
             st.markdown("<br>", unsafe_allow_html=True)
-            age_invalid = current_age < 0 or current_age > 60
+            age_invalid = current_age < 3 or current_age > 60
             
             # Past visits validation
             date_invalid = False
@@ -857,22 +905,22 @@ else:
                 if past1_date >= current_date:
                     date_invalid = True
                     date_error_msg = "❌ **Invalid Dates**: Previous Visit date must be before the current visit date."
-                elif past1_age < 0 or past1_age > 60:
+                elif past1_age < 3 or past1_age > 60:
                     date_invalid = True
-                    date_error_msg = "❌ **Invalid Age**: Estimated age at Previous Visit must be between 0 and 60 months."
+                    date_error_msg = "❌ **Invalid Age**: Estimated age at Previous Visit must be between 3 and 60 months."
             if include_past2:
                 if past2_date >= current_date:
                     date_invalid = True
                     date_error_msg = "❌ **Invalid Dates**: Most Recent Visit date must be before the current visit date."
-                elif past2_age < 0 or past2_age > 60:
+                elif past2_age < 3 or past2_age > 60:
                     date_invalid = True
-                    date_error_msg = "❌ **Invalid Age**: Estimated age at Most Recent Visit must be between 0 and 60 months."
+                    date_error_msg = "❌ **Invalid Age**: Estimated age at Most Recent Visit must be between 3 and 60 months."
                 if include_past1 and past1_date >= past2_date:
                     date_invalid = True
                     date_error_msg = "❌ **Invalid Dates**: Previous Visit date must be before Most Recent Visit date."
 
             if age_invalid:
-                st.error("❌ **Invalid Age**: Subject age must be between 0 and 60 months.")
+                st.error("❌ **Invalid Age**: Subject age must be between 3 and 60 months.")
             elif date_invalid:
                 st.error(date_error_msg)
                 
@@ -925,161 +973,9 @@ else:
             # Sort trajectory list chronologically by age_months
             trajectory_list = sorted(trajectory_list, key=lambda x: x["age_months"])
 
-            # Input Vector for Model (using all features except MUAC)
-            input_vector = pd.DataFrame([{
-                'age_months': current_age,
-                'weight': current_weight,
-                'height': current_height,
-                'gender': gender,
-                'birth_weight': birth_weight,
-                'household_income_level': income_level,
-                'parent_education_level': education_level,
-                'access_to_clean_water': water_access,
-                'sanitation_access': sanitation_access,
-                'hiv_exposure': hiv_exposure,
-                'chronic_illness': chronic_illness,
-                'recurrent_diarrhea': recurrent_diarrhea,
-                'exclusive_breastfeeding_6m': breastfeeding_6m,
-                'immunization_status': immunization_status,
-                'feeding_practice': "Mixed Feeding" if feeding_diversity > 3 else "Complementary Feeding" if current_age >= 6 else "Exclusive Breastfeeding",
-                'recent_illness': "Fever" if recent_illness == "yes" else "no",
-                'z_score': z_score if z_score is not None else 0.0,
-            }])
-
-            # Prediction (Multi-class)
-            try:
-                probabilities = model.predict_proba(input_vector)[0]
-                classes = list(model.classes_)
-                
-                # Enforce Z-score clinical constraints:
-                # Malnourished (Moderate/Severe Malnutrition) ONLY if z_score <= -2.0
-                # Otherwise, Not Malnourished (High/Moderate/Low Risk)
-                if z_score <= -2.0:
-                    allowed_classes = ["Moderate Malnutrition", "Severe Malnutrition"]
-                else:
-                    allowed_classes = ["High Risk", "Moderate Risk", "Low Risk"]
-                
-                # Filter probabilities to allowed classes
-                allowed_probs = []
-                for c in allowed_classes:
-                    if c in classes:
-                        allowed_probs.append((c, probabilities[classes.index(c)]))
-                    else:
-                        allowed_probs.append((c, 0.0))
-                
-                # Find the allowed class with the highest probability
-                best_class, best_prob = max(allowed_probs, key=lambda x: x[1])
-                
-                # If all allowed classes have 0 probability (unlikely), fallback to clinical rules
-                if best_prob == 0.0:
-                    if z_score <= -3.0:
-                        predicted_class = "Severe Malnutrition"
-                    elif z_score <= -2.0:
-                        predicted_class = "Moderate Malnutrition"
-                    else:
-                        if z_score <= -1.0:
-                            predicted_class = "High Risk"
-                        else:
-                            predicted_class = "Low Risk"
-                    prob = 1.0
-                else:
-                    # Normalize probability among allowed classes
-                    sum_probs = sum(p for c, p in allowed_probs)
-                    if sum_probs > 0:
-                        prob = best_prob / sum_probs
-                    else:
-                        prob = best_prob
-                    predicted_class = best_class
-                
-                ml_risk = predicted_class
-                
-                if "Severe" in ml_risk or "High Risk" in ml_risk:
-                    ml_class = "status-danger"
-                    bar_color = "#e74c3c"
-                elif "Moderate Malnutrition" in ml_risk or "Moderate Risk" in ml_risk:
-                    ml_class = "status-warning"
-                    bar_color = "#ffa502"
-                else:
-                    ml_class = "status-normal"
-                    bar_color = "#2ecc71"
-                    
-                if "Malnutrition" in ml_risk:
-                    ml_risk = f"Predicted: Malnourished ({ml_risk})"
-                else:
-                    ml_risk = f"Predicted: Not Malnourished ({ml_risk})"
-                    
-            except Exception as e:
-                prob, ml_risk, ml_class, bar_color = 0, "Error", "status-neutral", "#95a5a6"
-                st.error(f"Prediction Error: {e}")
-
-            # Pre-calculate risk factors for explanation
+            # Initialize risk factors and contributing factors lists
             risk_factors = []
             contributing_factors = []
-            
-            if z_score is not None:
-                if z_score <= -3:
-                    risk_factors.append("Severe Acute Malnutrition (WHZ ≤ -3 SD) - Recommend immediate treatment.")
-                    contributing_factors.append("Critically low Weight-for-Height Z-Score (SAM)")
-                elif z_score <= -2:
-                    risk_factors.append("Moderate Acute Malnutrition (-3 < WHZ ≤ -2 SD) - Recommend nutritional treatment.")
-                    contributing_factors.append("Low Weight-for-Height Z-Score (MAM)")
-                elif z_score <= -1:
-                    risk_factors.append("High Risk (-2 < WHZ ≤ -1 SD)")
-                    contributing_factors.append("Below average Weight-for-Height Z-Score")
-                elif z_score <= 1:
-                    # Moderate risk (normal range)
-                    contributing_factors.append("Weight-for-Height Z-Score (Moderate Risk)")
-                elif z_score < 3:
-                    # Not Malnourished - Low Risk
-                    pass
-                else:
-                    risk_factors.append("Obese (WHZ ≥ 3 SD) - Recommend obesity management.")
-                    contributing_factors.append("Extremely high Weight-for-Height Z-Score")
-            
-            if birth_weight < 2.5:
-                risk_factors.append("⚠️ Low Birth Weight (< 2.5 kg): Increased Malnutrition Risk")
-                contributing_factors.append("Low birth weight (< 2.5 kg)")
-                
-            if recent_illness == "yes":
-                contributing_factors.append("Recent illness history")
-                risk_factors.append("Recent Illness (High Risk)")
-                
-            if immunization_status == 'zero_dose':
-                 risk_factors.append("❌ Zero Dose: Immediate Vaccination Referral Required")
-                 contributing_factors.append("Zero dose immunization status")
-            elif immunization_status == 'partially_immunized':
-                 risk_factors.append("⚠️ Partially Immunized: Refer for Catch-up Counseling")
-                 contributing_factors.append("Partial immunization")
-            
-            if hiv_exposure == 'hiv_infected':
-                risk_factors.append("❌ HIV Infected: High Risk - Immediate Clinical Management Required")
-                contributing_factors.append("HIV Infected status")
-            elif hiv_exposure == 'hiv_exposed_unaffected':
-                risk_factors.append("⚠️ HIV Exposed Unaffected: Moderate Risk - Monitor Growth Closely")
-                contributing_factors.append("HIV Exposed status")
-
-
-            if ebf_duration < 2:
-                risk_factors.append(f"❌ High Risk: Exclusive Breastfeeding stopped too early (< 2 months)")
-                contributing_factors.append("Suboptimal exclusive breastfeeding duration")
-            elif 2 <= ebf_duration <= 5:
-                risk_factors.append(f"⚠️ Moderate Risk: Exclusive Breastfeeding stopped early (2-5 months)")
-                contributing_factors.append("Early cessation of exclusive breastfeeding")
-            
-            if current_age >= 6 and feeding_diversity < 5:
-                risk_factors.append("Low Dietary Diversity (< 5 groups)")
-                contributing_factors.append("Low feeding diversity score")
-            
-            if water_access == 'no' or sanitation_access == 'no':
-                risk_factors.append("Poor WASH conditions (Infection Risk)")
-                contributing_factors.append("Limited access to clean water/sanitation")
-
-            if ses_category_label.startswith("Low SES"):
-                risk_factors.append(f"Low Socio-Economic Status (Score: {ses_score_total}/4): High Malnutrition Risk")
-                contributing_factors.append("Lower socio-economic factors")
-
-            if len(contributing_factors) == 0:
-                contributing_factors.append("No major specific risk factors identified; percentage reflects baseline demographic/growth patterns.")
 
             # --- Multi-parametric Clinical Assessment Synthesis ---
             growth_score = 0
@@ -1206,8 +1102,155 @@ else:
             else:
                 ses_recs.append(f"High SES ({ses_category_label})")
 
-            # Total score
+            # Total Clinical Vulnerability Score (CVS)
             total_ivs = growth_score + clinical_score + feeding_score + ses_pillar_score
+
+            # Pre-calculate additional risk factors for explanation
+            if z_score is not None:
+                if z_score <= -3:
+                    risk_factors.append("Severe Acute Malnutrition (WHZ ≤ -3 SD) - Recommend immediate treatment.")
+                    contributing_factors.append("Critically low Weight-for-Height Z-Score (SAM)")
+                elif z_score <= -2:
+                    risk_factors.append("Moderate Acute Malnutrition (-3 < WHZ ≤ -2 SD) - Recommend nutritional treatment.")
+                    contributing_factors.append("Low Weight-for-Height Z-Score (MAM)")
+                elif z_score <= -1:
+                    risk_factors.append("High Risk (-2 < WHZ ≤ -1 SD)")
+                    contributing_factors.append("Below average Weight-for-Height Z-Score")
+                elif z_score <= 1:
+                    contributing_factors.append("Weight-for-Height Z-Score (Moderate Risk)")
+                elif z_score < 3:
+                    pass
+                else:
+                    risk_factors.append("Obese (WHZ ≥ 3 SD) - Recommend obesity management.")
+                    contributing_factors.append("Extremely high Weight-for-Height Z-Score")
+            
+            if birth_weight < 2.5:
+                risk_factors.append("⚠️ Low Birth Weight (< 2.5 kg): Increased Malnutrition Risk")
+                contributing_factors.append("Low birth weight (< 2.5 kg)")
+                
+            if recent_illness == "yes":
+                contributing_factors.append("Recent illness history")
+                risk_factors.append("Recent Illness (High Risk)")
+                
+            if immunization_status == 'zero_dose':
+                 risk_factors.append("❌ Zero Dose: Immediate Vaccination Referral Required")
+                 contributing_factors.append("Zero dose immunization status")
+            elif immunization_status == 'partially_immunized':
+                 risk_factors.append("⚠️ Partially Immunized: Refer for Catch-up Counseling")
+                 contributing_factors.append("Partial immunization")
+            
+            if hiv_exposure == 'hiv_infected':
+                risk_factors.append("❌ HIV Infected: High Risk - Immediate Clinical Management Required")
+                contributing_factors.append("HIV Infected status")
+            elif hiv_exposure == 'hiv_exposed_unaffected':
+                risk_factors.append("⚠️ HIV Exposed Uninfected: Moderate Risk - Monitor Growth Closely")
+                contributing_factors.append("HIV Exposed status")
+
+            if ebf_duration < 2:
+                risk_factors.append(f"❌ High Risk: Exclusive Breastfeeding stopped too early (< 2 months)")
+                contributing_factors.append("Suboptimal exclusive breastfeeding duration")
+            elif 2 <= ebf_duration <= 5:
+                risk_factors.append(f"⚠️ Moderate Risk: Exclusive Breastfeeding stopped early (2-5 months)")
+                contributing_factors.append("Early cessation of exclusive breastfeeding")
+            
+            if current_age >= 6 and feeding_diversity < 5:
+                risk_factors.append("Low Dietary Diversity (< 5 groups)")
+                contributing_factors.append("Low feeding diversity score")
+            
+            if water_access == 'no' or sanitation_access == 'no':
+                risk_factors.append("Poor WASH conditions (Infection Risk)")
+                contributing_factors.append("Limited access to clean water/sanitation")
+
+            if ses_category_label.startswith("Low SES"):
+                risk_factors.append(f"Low Socio-Economic Status (Score: {ses_score_total}/4): High Malnutrition Risk")
+                contributing_factors.append("Lower socio-economic factors")
+
+            if len(contributing_factors) == 0:
+                contributing_factors.append("No major specific risk factors identified; percentage reflects baseline demographic/growth patterns.")
+
+            # Input Vector for Model (using all features except MUAC)
+            input_vector = pd.DataFrame([{
+                'age_months': current_age,
+                'weight': current_weight,
+                'height': current_height,
+                'gender': gender,
+                'birth_weight': birth_weight,
+                'household_income_level': income_level,
+                'parent_education_level': education_level,
+                'access_to_clean_water': water_access,
+                'sanitation_access': sanitation_access,
+                'hiv_exposure': hiv_exposure,
+                'chronic_illness': chronic_illness,
+                'recurrent_diarrhea': recurrent_diarrhea,
+                'exclusive_breastfeeding_6m': breastfeeding_6m,
+                'immunization_status': immunization_status,
+                'feeding_practice': "Mixed Feeding" if feeding_diversity > 3 else "Complementary Feeding" if current_age >= 6 else "Exclusive Breastfeeding",
+                'recent_illness': "Fever" if recent_illness == "yes" else "no",
+                'z_score': z_score if z_score is not None else 0.0,
+            }])
+
+            # Prediction (Multi-class with Clinical Rules Alignment)
+            try:
+                probabilities = model.predict_proba(input_vector)[0]
+                classes = list(model.classes_)
+                
+                # Align prediction with combined clinical parameters (CVS & WHZ)
+                if z_score <= -2.0:
+                    # Wasted / Malnourished
+                    if z_score <= -3.0 or total_ivs >= 6:
+                        predicted_class = "Severe Malnutrition"
+                    else:
+                        predicted_class = "Moderate Malnutrition"
+                else:
+                    # Not Malnourished based on WHZ
+                    if total_ivs >= 4:
+                        predicted_class = "High Risk"
+                    elif total_ivs >= 2:
+                        predicted_class = "Moderate Risk"
+                    else:
+                        predicted_class = "Low Risk"
+                
+                # Fetch model probability for the aligned class
+                if predicted_class in classes:
+                    model_prob = probabilities[classes.index(predicted_class)]
+                else:
+                    model_prob = 0.0
+                    
+                # Calculate score-based clinical probability for consistent confidence reporting
+                if predicted_class == "High Risk":
+                    clinical_prob = min(0.95, 0.70 + (total_ivs - 4) * 0.10)
+                elif predicted_class == "Moderate Risk":
+                    clinical_prob = min(0.95, 0.60 + (total_ivs - 2) * 0.15)
+                elif predicted_class == "Low Risk":
+                    clinical_prob = min(0.95, 0.75 + (1 - total_ivs) * 0.20)
+                elif predicted_class == "Severe Malnutrition":
+                    clinical_prob = min(0.95, 0.85 + (total_ivs - 6) * 0.05)
+                else: # Moderate Malnutrition
+                    clinical_prob = min(0.95, 0.70 + (total_ivs - 4) * 0.10)
+                    
+                # Blend model and clinical probability (30% model, 70% clinical)
+                prob = 0.3 * model_prob + 0.7 * clinical_prob
+                
+                ml_risk = predicted_class
+                
+                if "Severe" in ml_risk or "High Risk" in ml_risk:
+                    ml_class = "status-danger"
+                    bar_color = "#e74c3c"
+                elif "Moderate Malnutrition" in ml_risk or "Moderate Risk" in ml_risk:
+                    ml_class = "status-warning"
+                    bar_color = "#ffa502"
+                else:
+                    ml_class = "status-normal"
+                    bar_color = "#2ecc71"
+                    
+                if "Malnutrition" in ml_risk:
+                    ml_risk = f"Predicted: Malnourished ({ml_risk})"
+                else:
+                    ml_risk = f"Predicted: Not Malnourished ({ml_risk})"
+                    
+            except Exception as e:
+                prob, ml_risk, ml_class, bar_color = 0, "Error", "status-neutral", "#95a5a6"
+                st.error(f"Prediction Error: {e}")
             
             # Determine Final Risk Status, Box Color, and Recommendations
             if z_score <= -3 or hiv_exposure == 'hiv_infected' or total_ivs >= 6 or (ml_risk is not None and "Severe" in ml_risk):
