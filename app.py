@@ -31,6 +31,28 @@ def load_who_standards():
 
 model = load_model()
 
+def get_expected_growth(age_months, gender):
+    """Returns approximate WHO median weight (kg) and height (cm) for given age and gender."""
+    milestones = {
+        'Male': {
+            0: (3.3, 50.0), 6: (7.9, 68.0), 12: (9.6, 75.7),
+            24: (12.2, 87.1), 36: (14.3, 96.1), 48: (16.3, 103.3), 60: (18.3, 110.0)
+        },
+        'Female': {
+            0: (3.2, 49.1), 6: (7.3, 65.7), 12: (8.9, 74.0),
+            24: (11.5, 85.5), 36: (13.9, 95.1), 48: (16.1, 102.7), 60: (18.2, 109.4)
+        }
+    }
+    m = milestones[gender]
+    ages = sorted(m.keys())
+    if age_months in m: return m[age_months]
+    lower_age = max([a for a in ages if a < age_months])
+    upper_age = min([a for a in ages if a > age_months])
+    lw, lh = m[lower_age]
+    uw, uh = m[upper_age]
+    fraction = (age_months - lower_age) / (upper_age - lower_age)
+    return round(lw + fraction * (uw - lw), 1), round(lh + fraction * (uh - lh), 1)
+
 def calculate_whz(height, weight, gender):
     """Calculates WHZ using WHO LMS method."""
     standards = load_who_standards()
@@ -62,12 +84,10 @@ def calculate_whz(height, weight, gender):
         category = "Severe Acute Malnutrition"
     elif z_score <= -2:
         category = "Moderate Acute Malnutrition"
-    elif z_score <= -1:
-        category = "High Risk"
-    elif z_score <= 1:
-        category = "Moderate Risk"
-    elif z_score < 3:
-        category = "Not Malnutritioned - Low Risk"
+    elif z_score <= 2:
+        category = "Not Malnourished"
+    elif z_score <= 3:
+        category = "Overweight"
     else:
         category = "Obese"
 
@@ -320,6 +340,15 @@ st.markdown(f"""
         background: linear-gradient(90deg, rgba(46, 213, 115, 0.1) 0%, rgba(46, 213, 115, 0.0) 100%);
     }}
     
+    /* Explicit Table Text Visibility in Light/Dark Mode */
+    .rec-box table,
+    .rec-box th,
+    .rec-box td,
+    .rec-box b,
+    .rec-box strong {{
+        color: var(--text-color) !important;
+    }}
+    
     /* Expander Styling */
     .streamlit-expanderHeader {{
         background-color: var(--card-bg); /* Dark background */
@@ -379,21 +408,56 @@ st.markdown(f"""
             margin-top: 8px !important;
         }}
     }}
+    
+    /* Elegant Premium Blue Sidebar Styling */
+    [data-testid="stSidebar"] {{
+        background: linear-gradient(180deg, #1b365d 0%, #0f2038 100%) !important;
+        border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }}
+    
+    /* Ensure high contrast for all text in the sidebar */
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p,
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] span,
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3,
+    [data-testid="stSidebar"] h4,
+    [data-testid="stSidebar"] h5,
+    [data-testid="stSidebar"] h6 {{
+        color: #ffffff !important;
+    }}
+    
+    /* Style form controls and inputs inside the sidebar to match the theme */
+    [data-testid="stSidebar"] .stRadio label p {{
+        color: #ffffff !important;
+    }}
+    
+    /* Custom buttons inside the sidebar */
+    [data-testid="stSidebar"] button {{
+        background: linear-gradient(135deg, #2980b9 0%, #1c365d 100%) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        color: #ffffff !important;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }}
+    
+    [data-testid="stSidebar"] button:hover {{
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%) !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+    }}
+    
+    /* Style inline code elements in the sidebar */
+    [data-testid="stSidebar"] code {{
+        color: #ffffff !important;
+        background-color: rgba(255, 255, 255, 0.15) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        padding: 2px 6px !important;
+        border-radius: 4px !important;
+    }}
     </style>
 """, unsafe_allow_html=True)
-
-# --- 3. Sidebar Navigation & Connection ---
-st.sidebar.markdown("""
-    <div style="text-align: center; margin-bottom: 20px;">
-        <h2 style="margin: 0; font-size: 1.5rem; color: #3498db;">🧭 Navigation</h2>
-    </div>
-""", unsafe_allow_html=True)
-
-app_mode = st.sidebar.radio(
-    "Navigation Menu",
-    ["🏥 New Assessment", "📂 History & Growth Trends"],
-    label_visibility="collapsed"
-)
 
 # --- 3. Database Connection (Set directly in source code) ---
 # Replace the placeholders below with your Supabase credentials to enable saving assessments
@@ -410,6 +474,113 @@ if sb_url == "https://your-project.supabase.co":
 if sb_key == "your-anon-key":
     sb_key = ""
 
+# --- Authentication Overlay ---
+if sb_url and sb_key:
+    if 'auth_user' not in st.session_state:
+        st.session_state.auth_user = None
+
+    if st.session_state.auth_user is None:
+        # Header for login
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);">
+            <h1 style="color: white !important; margin-bottom: 5px; font-size: 2.2rem;">🏥 Child Malnutrition Analysis</h1>
+            <p style="color: rgba(255,255,255,0.9) !important; font-size: 1.1rem; margin-bottom: 0;">AI-Powered Trend Risk Prediction & Clinical Decision Support</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        c_auth1, c_auth2, c_auth3 = st.columns([1, 1.5, 1])
+        with c_auth2:
+            st.markdown("""
+            <div style="background-color: var(--card-bg); padding: 30px; border-radius: 15px; border: 1px solid var(--metric-border); box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+                <h3 style="text-align: center; margin-bottom: 10px; color: var(--text-color);">🔐 Clinician Access Control</h3>
+                <p style="text-align: center; font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">Please authenticate to access patient data and run ML predictions.</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            auth_mode = st.radio("Access Mode", ["Sign In", "Create Account"], horizontal=True, label_visibility="collapsed")
+            
+            email_input = st.text_input("📧 Email Address", placeholder="clinician@hospital.org")
+            pass_input = st.text_input("🔑 Password", type="password", placeholder="••••••••")
+            
+            import database as db
+            
+            if auth_mode == "Sign In":
+                login_btn = st.button("🔑 LOGIN TO DASHBOARD", type="primary")
+                if login_btn:
+                    if not email_input or not pass_input:
+                        st.error("Please fill in both email and password fields.")
+                    else:
+                        with st.spinner("Authenticating..."):
+                            success, result = db.signin_user(sb_url, sb_key, email_input, pass_input)
+                            if success:
+                                user_id = result.get("user", {}).get("id")
+                                # Query user profile to check approval status
+                                profile = db.get_user_profile(sb_url, sb_key, user_id)
+                                if profile:
+                                    if not profile.get("is_approved", False):
+                                        st.error("⚠️ **Access Blocked**: Your account is pending administrator approval. Please contact your supervisor.")
+                                    else:
+                                        st.session_state.auth_user = {
+                                            "email": email_input,
+                                            "token": result.get("access_token"),
+                                            "user_id": user_id,
+                                            "is_admin": profile.get("is_admin", False)
+                                        }
+                                        st.success("Access Granted! Loading system...")
+                                        st.rerun()
+                                else:
+                                    # Fallback if profile trigger is delayed
+                                    st.error("⚠️ Profile initialization incomplete. Please try logging in again in a few seconds.")
+                            else:
+                                st.error(f"Authentication Failed: {result}")
+            else:
+                signup_btn = st.button("📝 CREATE ACCOUNT", type="primary")
+                if signup_btn:
+                    if not email_input or not pass_input:
+                        st.error("Please fill in both email and password fields.")
+                    elif len(pass_input) < 6:
+                        st.error("Password must be at least 6 characters long.")
+                    else:
+                        with st.spinner("Creating account..."):
+                            success, result = db.signup_user(sb_url, sb_key, email_input, pass_input)
+                            if success:
+                                identities = result.get("user", {}).get("identities", [])
+                                if not identities:
+                                    st.warning("Account request submitted. If you haven't confirmed your email, please check your inbox.")
+                                else:
+                                    st.success("Account created successfully! Check your email for a verification link or try logging in. Note: Your account will require admin approval before you can access the dashboard.")
+                            else:
+                                st.error(f"Failed to create account: {result}")
+        st.stop()
+
+# --- 3. Sidebar Navigation & Connection ---
+st.sidebar.markdown("""
+    <div style="text-align: center; margin-bottom: 20px;">
+        <h2 style="margin: 0; font-size: 1.5rem; color: #3498db;">🧭 Navigation</h2>
+    </div>
+""", unsafe_allow_html=True)
+
+is_admin = False
+if sb_url and sb_key and st.session_state.get('auth_user') is not None:
+    st.sidebar.markdown(f"👤 **Clinician**: `{st.session_state.auth_user['email']}`")
+    is_admin = st.session_state.auth_user.get("is_admin", False)
+    if is_admin:
+        st.sidebar.markdown("🛡️ **Role**: `Administrator`")
+    if st.sidebar.button("🔓 Logout", use_container_width=True):
+        st.session_state.auth_user = None
+        st.rerun()
+    st.sidebar.markdown("---")
+
+nav_options = ["🏥 New Assessment", "📂 History & Growth Trends"]
+if is_admin:
+    nav_options.append("🔑 Admin Panel")
+
+app_mode = st.sidebar.radio(
+    "Navigation Menu",
+    nav_options,
+    label_visibility="collapsed"
+)
+
 st.sidebar.markdown("---")
 st.sidebar.subheader("🔌 Database Connection")
 
@@ -419,42 +590,57 @@ else:
     st.sidebar.info("Offline Mode (Saving disabled)")
 
 def get_unique_subject_id():
-    """Generates a random 4-character ID (1 letter, 3 numbers) and ensures it is unique in Supabase."""
-    import random
-    import string
+    """Generates the next sequential subject ID (e.g., M001) by finding the maximum ID number in the database or CSV, and incrementing it."""
+    import re
     import requests
     
-    # If offline, generate a simple random ID
-    if not sb_url or not sb_key:
-        l = random.choice(string.ascii_uppercase)
-        d = "".join(random.choice(string.digits) for _ in range(3))
-        return f"{l}{d}"
-        
-    headers = {
-        "apikey": sb_key,
-        "Authorization": f"Bearer {sb_key}",
-        "Content-Type": "application/json"
-    }
+    max_id_num = 0
+    pattern = re.compile(r'^M(\d+)$', re.IGNORECASE)
     
-    # Try up to 100 times to find a unique ID
-    for _ in range(100):
-        l = random.choice(string.ascii_uppercase)
-        d = "".join(random.choice(string.digits) for _ in range(3))
-        candidate_id = f"{l}{d}"
-        
-        endpoint = f"{sb_url.rstrip('/')}/rest/v1/assessments?subject_id=eq.{candidate_id}&select=subject_id"
+    # 1. Try to find the max ID from Supabase if connected
+    if sb_url and sb_key:
+        headers = {
+            "apikey": sb_key,
+            "Authorization": f"Bearer {sb_key}",
+            "Content-Type": "application/json"
+        }
+        endpoint = f"{sb_url.rstrip('/')}/rest/v1/assessments?select=subject_id"
         try:
             response = requests.get(endpoint, headers=headers)
             if response.status_code == 200:
-                if len(response.json()) == 0:
-                    return candidate_id
+                records = response.json()
+                for rec in records:
+                    sid = rec.get("subject_id")
+                    if sid:
+                        match = pattern.match(str(sid).strip())
+                        if match:
+                            num = int(match.group(1))
+                            if num > max_id_num:
+                                max_id_num = num
         except Exception:
             pass
-            
-    # Fallback if checks failed
-    l = random.choice(string.ascii_uppercase)
-    d = "".join(random.choice(string.digits) for _ in range(3))
-    return f"{l}{d}"
+
+    # 2. Check local CSV files to see if there are higher IDs (e.g., up to M001)
+    for csv_file in ["kenyan_malnutrition_data.csv", "malnutrition_data.csv"]:
+        try:
+            import os
+            if os.path.exists(csv_file):
+                # Check headers first
+                header = pd.read_csv(csv_file, nrows=0).columns.tolist()
+                if "subject_id" in header:
+                    df_temp = pd.read_csv(csv_file, usecols=["subject_id"])
+                    for sid in df_temp["subject_id"].dropna().unique():
+                        match = pattern.match(str(sid).strip())
+                        if match:
+                            num = int(match.group(1))
+                            if num > max_id_num:
+                                max_id_num = num
+        except Exception:
+            pass
+
+    # 3. Fallback/Increment
+    next_num = max_id_num + 1
+    return f"M{next_num:03d}"
 
 # --- 4. Header ---
 head_col, tog_col = st.columns([6, 1])
@@ -485,18 +671,10 @@ else:
                 if 'generated_subject_id' not in st.session_state:
                     st.session_state.generated_subject_id = get_unique_subject_id()
                 
-                c_sid1, c_sid2 = st.columns([3, 1])
-                with c_sid1:
-                    subject_id_input = st.text_input("Subject ID (Auto-generated)", value=st.session_state.generated_subject_id, disabled=True, help="Automatically generated unique ID for this child.")
-                with c_sid2:
-                    st.write("") # spacing
-                    st.write("")
-                    if st.button("🔄 New ID", help="Generate a new subject ID for a different child"):
-                        st.session_state.generated_subject_id = get_unique_subject_id()
-                        st.rerun()
+                subject_id_input = st.text_input("Subject ID (Auto-generated)", value=st.session_state.generated_subject_id, disabled=True, help="Automatically generated unique ID for this child.")
                 c1, c2 = st.columns(2)
                 with c1: gender = st.selectbox("Gender", ["Male", "Female"])
-                with c2: current_age = st.number_input("Age (months)", 0, 59, 24)
+                with c2: current_age = st.number_input("Age (months)", 0, 60, 24)
                 
                 c3, c4 = st.columns(2)
                 with c3: birth_weight = st.number_input("Birth Weight (kg)", 0.5, 6.0, 3.0, step=0.1)
@@ -507,59 +685,58 @@ else:
                 c_date, c5, c6 = st.columns([1.2, 1, 1])
                 with c_date: current_date = st.date_input("Visit Date", datetime.date.today())
                 with c5: current_weight = st.number_input("Current Weight (kg)", min_value=2.0, max_value=30.0, value=9.5, step=0.1)
-                with c6: current_height = st.number_input("Current Height (cm)", min_value=45.0, max_value=120.0, value=75.0, step=0.1)
+                with c6: current_height = st.number_input("Current Height/Length (cm)", min_value=45.0, max_value=120.0, value=75.0, step=0.1)
+
+
 
                 st.markdown("---")
-                st.markdown("<b>📜 Past Visits (Optional for Z-Score Trajectory)</b>", unsafe_allow_html=True)
+                st.markdown("<b>📜 Past Visits</b>", unsafe_allow_html=True)
                 
-                p_col1, p_col2 = st.columns(2)
-                with p_col1:
-                    include_past1 = st.checkbox("Include Past Visit 1 (Most Recent)", value=False)
-                with p_col2:
-                    include_past2 = st.checkbox("Include Past Visit 2 (Older)", value=False)
+                include_past1 = True
+                include_past2 = True
                 
                 past1_data = None
                 past2_data = None
                 
-                if include_past1:
-                    st.markdown("<p style='font-weight:600; color:var(--primary-color); margin-bottom: 2px;'>Past Visit 1 (Most Recent)</p>", unsafe_allow_html=True)
-                    pc1, pc2, pc3 = st.columns([1.2, 1, 1])
-                    with pc1:
-                        past1_date = st.date_input("Visit 1 Date", value=current_date - datetime.timedelta(days=30), key="past1_date")
-                    with pc2:
-                        past1_weight = st.number_input("Visit 1 Weight (kg)", min_value=2.0, max_value=30.0, value=9.0, step=0.1, key="past1_weight")
-                    with pc3:
-                        past1_height = st.number_input("Visit 1 Height (cm)", min_value=45.0, max_value=120.0, value=73.0, step=0.1, key="past1_height")
-                    
-                    days_diff1 = (current_date - past1_date).days
-                    past1_age = int(round(current_age - (days_diff1 / 30.4375)))
-                    if past1_age < 0:
-                        st.error("❌ Visit 1 date is before child's birth (age < 0).")
-                    elif past1_age > 59:
-                        st.error("❌ Visit 1 age exceeds 59 months.")
-                    else:
-                        st.caption(f"Estimated Age at Visit 1: **{past1_age} months**")
-                        past1_data = {"date": past1_date, "weight": past1_weight, "height": past1_height, "age_months": past1_age}
-                
                 if include_past2:
-                    st.markdown("<p style='font-weight:600; color:var(--primary-color); margin-bottom: 2px;'>Past Visit 2 (Older)</p>", unsafe_allow_html=True)
+                    st.markdown("<p style='font-weight:600; color:var(--primary-color); margin-bottom: 2px;'>Most Recent Visit</p>", unsafe_allow_html=True)
                     pc4, pc5, pc6 = st.columns([1.2, 1, 1])
                     with pc4:
-                        past2_date = st.date_input("Visit 2 Date", value=current_date - datetime.timedelta(days=60), key="past2_date")
+                        past2_date = st.date_input("Most Recent Visit Date", value=current_date - datetime.timedelta(days=30), key="past2_date")
                     with pc5:
-                        past2_weight = st.number_input("Visit 2 Weight (kg)", min_value=2.0, max_value=30.0, value=8.5, step=0.1, key="past2_weight")
+                        past2_weight = st.number_input("Most Recent Visit Weight (kg)", min_value=2.0, max_value=30.0, value=8.5, step=0.1, key="past2_weight")
                     with pc6:
-                        past2_height = st.number_input("Visit 2 Height (cm)", min_value=45.0, max_value=120.0, value=71.0, step=0.1, key="past2_height")
+                        past2_height = st.number_input("Most Recent Visit Height (cm)", min_value=45.0, max_value=120.0, value=71.0, step=0.1, key="past2_height")
                     
                     days_diff2 = (current_date - past2_date).days
                     past2_age = int(round(current_age - (days_diff2 / 30.4375)))
                     if past2_age < 0:
-                        st.error("❌ Visit 2 date is before child's birth (age < 0).")
-                    elif past2_age > 59:
-                        st.error("❌ Visit 2 age exceeds 59 months.")
+                        st.error("❌ Most Recent Visit age cannot be negative (before birth).")
+                    elif past2_age > 60:
+                        st.error("❌ Most Recent Visit age exceeds 60 months.")
                     else:
-                        st.caption(f"Estimated Age at Visit 2: **{past2_age} months**")
+                        st.caption(f"Age at Most Recent Visit: **{past2_age} months**")
                         past2_data = {"date": past2_date, "weight": past2_weight, "height": past2_height, "age_months": past2_age}
+                
+                if include_past1:
+                    st.markdown("<p style='font-weight:600; color:var(--primary-color); margin-bottom: 2px;'>Previous Visit Before Most Recent Visit</p>", unsafe_allow_html=True)
+                    pc1, pc2, pc3 = st.columns([1.2, 1, 1])
+                    with pc1:
+                        past1_date = st.date_input("Previous Visit Date", value=current_date - datetime.timedelta(days=60), key="past1_date")
+                    with pc2:
+                        past1_weight = st.number_input("Previous Visit Weight (kg)", min_value=2.0, max_value=30.0, value=9.0, step=0.1, key="past1_weight")
+                    with pc3:
+                        past1_height = st.number_input("Previous Visit Height (cm)", min_value=45.0, max_value=120.0, value=73.0, step=0.1, key="past1_height")
+                    
+                    days_diff1 = (current_date - past1_date).days
+                    past1_age = int(round(current_age - (days_diff1 / 30.4375)))
+                    if past1_age < 0:
+                        st.error("❌ Previous Visit age cannot be negative (before birth).")
+                    elif past1_age > 60:
+                        st.error("❌ Previous Visit age exceeds 60 months.")
+                    else:
+                        st.caption(f"Age at Previous Visit: **{past1_age} months**")
+                        past1_data = {"date": past1_date, "weight": past1_weight, "height": past1_height, "age_months": past1_age}
 
             with st.expander("2. 💊 Health & Clinical History", expanded=True):
                 col_a, col_b = st.columns(2)
@@ -578,27 +755,31 @@ else:
                     }
                     immunization_status = imm_map[imm_label]
 
-                    recurrent_diarrhea = st.selectbox("Recurrent Diarrhea?", ["yes", "no"], index=1)
+                    recurrent_diarrhea = "no" # Removed from UI, hardcoded to maintain model compatibility
                     chronic_illness = st.selectbox("Chronic Illness? (CHD, TB, CP)", ["yes", "no"], index=1)
                 with col_b:
-                    hiv_options = ["HIV Unexposed", "HIV Exposed Unaffected", "HIV Infected", "Unknown"]
+                    hiv_options = ["HIV Unexposed", "HIV Exposed Unaffected", "HIV Infected"]
                     hiv_label = st.selectbox("HIV Status", hiv_options, index=0)
                     
                     hiv_map = {
                         "HIV Unexposed": "hiv_unexposed",
                         "HIV Exposed Unaffected": "hiv_exposed_unaffected",
-                        "HIV Infected": "hiv_infected",
-                        "Unknown": "unknown"
+                        "HIV Infected": "hiv_infected"
                     }
                     hiv_exposure = hiv_map[hiv_label]
                     
-                    recent_illness = st.selectbox("Recent Illness? (in last month)", ["yes", "no"], index=1)
+                    recent_illness = st.selectbox("Recent Illness? (respiratory infections, diarrhoea, meningitis, malaria parasitic infection ) from last visit", ["yes", "no"], index=1)
 
             with st.expander("3. 🍲 Feeding Practices", expanded=True):
                 col_c, col_d = st.columns(2)
                 with col_c:
-                    ebf_duration = st.number_input("Duration of Exclusive Breastfeeding (months)", min_value=0, max_value=12, value=6, help="How many months was the child exclusively breastfed?")
-                    breastfeeding_6m = "yes" if ebf_duration >= 6 else "no"
+                    if current_age >= 6:
+                        ebf_duration = st.number_input("Duration of Exclusive Breastfeeding (months)", min_value=0, max_value=12, value=6, help="How many months was the child exclusively breastfed?")
+                        breastfeeding_6m = "yes" if ebf_duration >= 6 else "no"
+                    else:
+                        appropriate_bf = st.selectbox("Appropriate breast feeding for age?", ["yes", "no"], index=0)
+                        ebf_duration = current_age if appropriate_bf == "yes" else 0
+                        breastfeeding_6m = "yes" if appropriate_bf == "yes" else "no"
                     meal_freq = 3 # Default value for model compatibility
                 with col_d:
                     if current_age >= 6:
@@ -659,12 +840,7 @@ else:
                     ses_category_label = "High SES (Low Risk)"
                     ses_color = "#2ecc71"
 
-                st.markdown("---")
-                c_score, c_cat = st.columns([1, 2])
-                with c_score:
-                    st.markdown(f"**Total SES Score:** <span style='font-size:1.2em'>{ses_score_total} / 4</span>", unsafe_allow_html=True)
-                with c_cat:
-                    st.markdown(f"**SES Category:** <span style='color:{ses_color}; font-weight:bold; font-size:1.2em'>{ses_category_label}</span>", unsafe_allow_html=True)
+                # UI Display for SES Score and Category hidden as requested
                 
                 # Derive proxy values for features not in the UI
                 education_level = "primary" if income_level == "low" else "secondary" if income_level == "middle" else "tertiary"
@@ -672,7 +848,7 @@ else:
                 sanitation_access = "no" if (income_level == "low" or crowding_score == 0) else "yes"
                 
             st.markdown("<br>", unsafe_allow_html=True)
-            age_invalid = current_age < 0 or current_age > 59
+            age_invalid = current_age < 0 or current_age > 60
             
             # Past visits validation
             date_invalid = False
@@ -680,23 +856,23 @@ else:
             if include_past1:
                 if past1_date >= current_date:
                     date_invalid = True
-                    date_error_msg = "❌ **Invalid Dates**: Past Visit 1 date must be before the current visit date."
-                elif past1_age < 0 or past1_age > 59:
+                    date_error_msg = "❌ **Invalid Dates**: Previous Visit date must be before the current visit date."
+                elif past1_age < 0 or past1_age > 60:
                     date_invalid = True
-                    date_error_msg = "❌ **Invalid Age**: Estimated age at Past Visit 1 must be between 0 and 59 months."
+                    date_error_msg = "❌ **Invalid Age**: Estimated age at Previous Visit must be between 0 and 60 months."
             if include_past2:
                 if past2_date >= current_date:
                     date_invalid = True
-                    date_error_msg = "❌ **Invalid Dates**: Past Visit 2 date must be before the current visit date."
-                elif past2_age < 0 or past2_age > 59:
+                    date_error_msg = "❌ **Invalid Dates**: Most Recent Visit date must be before the current visit date."
+                elif past2_age < 0 or past2_age > 60:
                     date_invalid = True
-                    date_error_msg = "❌ **Invalid Age**: Estimated age at Past Visit 2 must be between 0 and 59 months."
-                if include_past1 and past2_date >= past1_date:
+                    date_error_msg = "❌ **Invalid Age**: Estimated age at Most Recent Visit must be between 0 and 60 months."
+                if include_past1 and past1_date >= past2_date:
                     date_invalid = True
-                    date_error_msg = "❌ **Invalid Dates**: Past Visit 2 date must be before Past Visit 1 date."
+                    date_error_msg = "❌ **Invalid Dates**: Previous Visit date must be before Most Recent Visit date."
 
             if age_invalid:
-                st.error("❌ **Invalid Age**: Subject age must be between 0 and 59 months.")
+                st.error("❌ **Invalid Age**: Subject age must be between 0 and 60 months.")
             elif date_invalid:
                 st.error(date_error_msg)
                 
@@ -827,6 +1003,11 @@ else:
                     ml_class = "status-normal"
                     bar_color = "#2ecc71"
                     
+                if "Malnutrition" in ml_risk:
+                    ml_risk = f"Predicted: Malnourished ({ml_risk})"
+                else:
+                    ml_risk = f"Predicted: Not Malnourished ({ml_risk})"
+                    
             except Exception as e:
                 prob, ml_risk, ml_class, bar_color = 0, "Error", "status-neutral", "#95a5a6"
                 st.error(f"Prediction Error: {e}")
@@ -876,8 +1057,7 @@ else:
             elif hiv_exposure == 'hiv_exposed_unaffected':
                 risk_factors.append("⚠️ HIV Exposed Unaffected: Moderate Risk - Monitor Growth Closely")
                 contributing_factors.append("HIV Exposed status")
-            elif hiv_exposure == 'unknown':
-                 risk_factors.append("⚠️ HIV Status Unknown: Recommend Testing if indicated")
+
 
             if ebf_duration < 2:
                 risk_factors.append(f"❌ High Risk: Exclusive Breastfeeding stopped too early (< 2 months)")
@@ -922,6 +1102,28 @@ else:
                 else:
                     growth_recs.append("Normal WHZ Score")
             
+            # Expected growth comparisons (Weight-for-Age and Height-for-Age)
+            exp_w, exp_h = get_expected_growth(current_age, gender)
+            weight_deficit = exp_w - current_weight
+            height_deficit = exp_h - current_height
+            
+            if current_weight <= exp_w * 0.70:
+                growth_score += 3
+                growth_recs.append(f"Severely Underweight for Age (Weight is {weight_deficit:.1f} kg below standard)")
+                risk_factors.append(f"❌ Severe Weight-for-Age Deficit: Child is {weight_deficit:.1f} kg below expected standard")
+                contributing_factors.append("Severe underweight for age")
+            elif current_weight <= exp_w * 0.80 or weight_deficit >= 3.0:
+                growth_score += 1.5
+                growth_recs.append(f"Underweight for Age (Weight is {weight_deficit:.1f} kg below standard)")
+                risk_factors.append(f"⚠️ Weight-for-Age Deficit: Child is {weight_deficit:.1f} kg below expected standard")
+                contributing_factors.append("Underweight for age")
+                
+            if current_height <= exp_h * 0.90 or height_deficit >= 8.0:
+                growth_score += 1.5
+                growth_recs.append(f"Stunted Growth for Age (Height is {height_deficit:.1f} cm below standard)")
+                risk_factors.append(f"⚠️ Stunting Deficit: Child is {height_deficit:.1f} cm below expected height standard")
+                contributing_factors.append("Stunted growth for age")
+
             if birth_weight < 2.5:
                 growth_score += 1
                 growth_recs.append("Low Birth Weight (< 2.5 kg)")
@@ -1074,9 +1276,9 @@ else:
             </div>
             """
                     
-            if whz_category in ("Severe Acute Malnutrition", "Obese", "High Risk"):
+            if whz_category in ("Severe Acute Malnutrition", "Obese"):
                 whz_risk_class = "status-danger"
-            elif whz_category in ("Moderate Acute Malnutrition", "Moderate Risk"):
+            elif whz_category in ("Moderate Acute Malnutrition", "Overweight"):
                 whz_risk_class = "status-warning"
             else:
                 whz_risk_class = "status-normal"
@@ -1091,7 +1293,7 @@ else:
                 'recent_illness': recent_illness,
                 'chronic_illness': chronic_illness,
                 'immunization_status': immunization_status,
-                'feeding_practice': "Mixed Feeding" if feeding_diversity > 3 else "Complementary Feeding" if current_age >= 6 else "Exclusive Breastfeeding",
+                'feeding_practice': "Mixed Feeding" if feeding_diversity > 3 else "Complementary Feeding" if current_age >= 6 else ("Exclusive Breastfeeding" if breastfeeding_6m == "yes" else "Mixed Feeding"),
                 'household_income_level': income_level,
                 'parent_education_level': education_level,
                 'access_to_clean_water': water_access,
@@ -1118,10 +1320,32 @@ else:
             # Auto-save to Supabase on every analysis run
             if sb_url and sb_key:
                 import database as db
+                import requests
                 
+                # Check for ID conflict in Supabase before saving
+                final_subject_id = subject_id_input
+                id_changed = False
+                
+                headers = {
+                    "apikey": sb_key,
+                    "Authorization": f"Bearer {sb_key}",
+                    "Content-Type": "application/json"
+                }
+                conflict_endpoint = f"{sb_url.rstrip('/')}/rest/v1/assessments?subject_id=eq.{subject_id_input}&select=subject_id"
+                try:
+                    response = requests.get(conflict_endpoint, headers=headers)
+                    if response.status_code == 200 and len(response.json()) > 0:
+                        # ID exists! Let's generate a fresh unique one
+                        final_subject_id = get_unique_subject_id()
+                        id_changed = True
+                        # Update the stored results dict with the new ID
+                        st.session_state.assessment_results['subject_id'] = final_subject_id
+                except Exception:
+                    pass
+
                 # Build single-row payload containing current and optional past visits
                 payload = {
-                    "subject_id": subject_id_input,
+                    "subject_id": final_subject_id,
                     "created_at": current_date.isoformat(),
                     "age_months": int(current_age),
                     "gender": gender,
@@ -1131,7 +1355,7 @@ else:
                     "recent_illness": recent_illness,
                     "chronic_illness": chronic_illness,
                     "immunization_status": immunization_status,
-                    "feeding_practice": "Mixed Feeding" if feeding_diversity > 3 else "Complementary Feeding" if current_age >= 6 else "Exclusive Breastfeeding",
+                    "feeding_practice": "Mixed Feeding" if feeding_diversity > 3 else "Complementary Feeding" if current_age >= 6 else ("Exclusive Breastfeeding" if breastfeeding_6m == "yes" else "Mixed Feeding"),
                     "household_income_level": income_level,
                     "parent_education_level": education_level,
                     "access_to_clean_water": water_access,
@@ -1159,7 +1383,10 @@ else:
                 
                 success_curr, msg_curr = db.save_assessment(sb_url, sb_key, payload)
                 if success_curr:
-                    st.toast("Assessment saved successfully to Supabase!", icon="💾")
+                    if id_changed:
+                        st.warning(f"⚠️ **Subject ID Conflict**: The ID `{subject_id_input}` was just taken by another user. Your entry was automatically assigned to the next available ID: **`{final_subject_id}`**.")
+                    else:
+                        st.toast("Assessment saved successfully to Supabase!", icon="💾")
                     # Regenerate a new subject ID for the next assessment
                     st.session_state.generated_subject_id = get_unique_subject_id()
                 else:
@@ -1171,22 +1398,26 @@ else:
             if st.session_state.assessment_results is not None:
                 res = st.session_state.assessment_results
                 
+                # Expected growth milestones and deficit checks (shown after analyzing)
+                age = res['age_months']
+                gender_val = res['gender']
+                weight = res['weight']
+                height = res['height']
+                
+                exp_w, exp_h = get_expected_growth(age, gender_val)
+                weight_deficit = exp_w - weight
+                height_deficit = exp_h - height
+                
+                st.info(f"💡 For a {age}-month-old {gender_val.lower()}, the median standard weight is approximately **{exp_w} kg** and height is **{exp_h} cm**.")
+                if weight_deficit >= 3.0 or weight <= exp_w * 0.8:
+                    st.warning(f"⚠️ **Weight Deficit**: Child is **{weight_deficit:.1f} kg** below the median weight standard for their age ({exp_w} kg).")
+                if height_deficit >= 8.0 or height <= exp_h * 0.9:
+                    st.warning(f"⚠️ **Height Deficit (Potential Stunting)**: Child is **{height_deficit:.1f} cm** below the median height standard for their age ({exp_h} cm).")
+                
                 r1_col1, r1_col2 = st.columns(2)
                 with r1_col1:
-                    st.markdown(f"""
-                    <div class="metric-container">
-                        <p class="label-text">🤖 Trend Prediction</p>
-                        <div class="status-badge {res['ml_class']}">{res['ml_risk']}</div>
-                        <p style="margin-top: 15px; color: var(--text-muted); font-size: 0.9rem;">Confidence: <b style="color: var(--text-color); font-size: 1.2rem; font-weight: 800;">{res['ml_confidence']:.1%}</b></p>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-fill" style="width: {res['ml_confidence']*100}%; background-color: {res['bar_color']};"></div>
-                          </div>
-                      </div>""", unsafe_allow_html=True)
-                      
-                    st.markdown(f"""<div class="rec-box {res['rec_class']}" style="margin-top: 10px; padding: 15px;">{res['rec_text']}</div>""", unsafe_allow_html=True)
-                with r1_col2:
                     whz_val_str = f"{res['z_score']:.2f}" if res['z_score'] is not None else "N/A"
-                    whz_status_str = "Malnourished" if res['z_score'] is not None and res['z_score'] <= -2.0 else "Not Malnutritioned"
+                    whz_status_str = res.get('whz_category', "Unknown")
                     
                     st.markdown(f"""
                     <div class="metric-container">
@@ -1194,6 +1425,22 @@ else:
                         <div class="status-badge {res['whz_risk_class']}">{whz_status_str}</div>
                         <p style="margin-top: 15px; color: var(--text-muted); font-size: 0.9rem;">Value: <b style="color: var(--text-color); font-size: 1.2rem; font-weight: 800;">{whz_val_str} SD</b></p>
                     </div>""", unsafe_allow_html=True)
+                with r1_col2:
+                    is_malnourished = res['z_score'] is not None and res['z_score'] <= -2.0
+                    is_obese = res.get('whz_category') == "Obese"
+                    
+                    if not is_malnourished and not is_obese:
+                        st.markdown(f"""
+                        <div class="metric-container">
+                            <p class="label-text">🤖 Trend Prediction</p>
+                            <div class="status-badge {res['ml_class']}">{res['ml_risk']}</div>
+                            <p style="margin-top: 15px; color: var(--text-muted); font-size: 0.9rem;">Confidence: <b style="color: var(--text-color); font-size: 1.2rem; font-weight: 800;">{res['ml_confidence']:.1%}</b></p>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-fill" style="width: {res['ml_confidence']*100}%; background-color: {res['bar_color']};"></div>
+                              </div>
+                          </div>""", unsafe_allow_html=True)
+                          
+                    st.markdown(f"""<div class="rec-box {res['rec_class']}" style="margin-top: 10px; padding: 15px;">{res['rec_text']}</div>""", unsafe_allow_html=True)
                 
                 # --- 6. Trajectory of the Z-Score ---
                 st.markdown("---")
@@ -1267,7 +1514,15 @@ else:
                     last_visit = trajectory_df_sorted.iloc[-1]
                     z_diff = last_visit['z_score'] - first_visit['z_score']
                     
-                    if z_diff > 0.2:
+                    if last_visit['z_score'] > 3.0 and z_diff > 0.2:
+                        traj_status = "Risk of Obesity ⚠️"
+                        traj_class = "status-danger"
+                        traj_note = f"The child's WHZ has increased rapidly by **+{z_diff:.2f} SD** (from {first_visit['z_score']:.2f} SD to {last_visit['z_score']:.2f} SD). Warning: The child is now classified as Obese."
+                    elif last_visit['z_score'] > 2.0 and z_diff > 0.2:
+                        traj_status = "Risk of Overweight ⚠️"
+                        traj_class = "status-warning"
+                        traj_note = f"The child's WHZ has increased by **+{z_diff:.2f} SD** (from {first_visit['z_score']:.2f} SD to {last_visit['z_score']:.2f} SD). Warning: The child is now Overweight."
+                    elif z_diff > 0.2:
                         traj_status = "Improving 📈"
                         traj_class = "status-normal"
                         traj_note = f"The child's WHZ has improved by **+{z_diff:.2f} SD** (from {first_visit['z_score']:.2f} SD to {last_visit['z_score']:.2f} SD)."
@@ -1404,3 +1659,43 @@ else:
                     st.markdown("#### Visit Details")
                     detail_cols = [col for col in ["created_at", "age_months", "weight", "height", "z_score", "whz_category", "ml_risk", "ml_confidence", "feeding_practice", "recent_illness", "chronic_illness"] if col in subject_data.columns]
                     st.dataframe(subject_data[detail_cols], use_container_width=True)
+
+    elif app_mode == "🔑 Admin Panel" and is_admin:
+        st.subheader("🔑 Administrator Control Panel")
+        st.markdown("Use this panel to approve pending clinician registrations or manage user privileges.")
+        
+        import database as db
+        pending = db.get_pending_profiles(sb_url, sb_key)
+        
+        if not pending:
+            st.success("🎉 **No Pending Approvals**: All registered clinician accounts are approved.")
+        else:
+            st.markdown(f"### 📥 Pending Registrations ({len(pending)})")
+            
+            # Convert to DataFrame for display
+            df_pending = pd.DataFrame(pending)
+            df_pending = df_pending.rename(columns={
+                "email": "Clinician Email",
+                "created_at": "Registration Date",
+                "id": "User ID"
+            })
+            
+            # Display pending profiles in a clean dataframe
+            display_cols = ["Clinician Email", "Registration Date", "User ID"]
+            st.dataframe(df_pending[display_cols], use_container_width=True)
+            
+            # Action controls
+            st.markdown("#### Actions")
+            sel_email = st.selectbox("Select account to approve:", [p["email"] for p in pending])
+            
+            # Find the ID for the selected email
+            sel_id = next(p["id"] for p in pending if p["email"] == sel_email)
+            
+            if st.button("✅ Approve Selected Account", type="primary"):
+                with st.spinner("Approving user account..."):
+                    success, msg = db.approve_profile(sb_url, sb_key, sel_id)
+                    if success:
+                        st.success(f"Successfully approved **{sel_email}**!")
+                        st.rerun()
+                    else:
+                        st.error(f"Failed to approve account: {msg}")

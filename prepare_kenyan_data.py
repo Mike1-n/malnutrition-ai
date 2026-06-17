@@ -31,7 +31,7 @@ illnesses = ["Fever", "Malaria", "Pneumonia", "Gastroenteritis"]
 for i in range(1, num_records + 1):
     subject_id = f"K{i:04d}"
     gender = random.choice(["Male", "Female"])
-    age_months = random.randint(0, 59)
+    age_months = random.randint(3, 60)
     
     # 1. Height-for-age trajectory (starting ~50 cm up to ~110 cm, with biological variance)
     # Mean height follows a power curve based on age

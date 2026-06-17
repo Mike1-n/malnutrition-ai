@@ -1,0 +1,15 @@
+Line 121: text_color = '#ffffff' if theme == 'dark' else '#2c3e50'
+Line 207: --text-color: #ffffff;
+Line 298: .status-normal {{ color: #fff; background-color: var(--success-color); }}
+Line 299: .status-warning {{ color: #fff; background-color: var(--warning-color); }}
+Line 300: .status-danger {{ color: #fff; background-color: var(--danger-color); }}
+Line 301: .status-neutral {{ color: #fff; background-color: #95a5a6; }}
+Line 306: color: white !important;
+Line 319: .stButton>button p {{ color: white !important; }}
+Line 419: color: #ffffff !important;
+Line 424: color: #ffffff !important;
+Line 431: color: #ffffff !important;
+Line 467: <div style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);">
+Line 468: <h1 style="color: white !important; margin-bottom: 5px; font-size: 2.2rem;"> Child Malnutrition Analysis</h1>
+Line 636: <div style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);">
+Line 637: <h1 style="color: white !important; margin-bottom: 5px; font-size: 2.2rem;"> Child Malnutrition Analysis</h1>
