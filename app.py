@@ -1281,10 +1281,6 @@ else:
                     <b>Diagnostic Status:</b> 
                     <span style="font-weight: bold; font-size: 1.1rem;">{final_status}</span>
                 </p>
-                <p style="margin: 0 0 15px 0; font-size: 0.92rem;">
-                    <b>Clinical Vulnerability Score (CVS):</b> <code>{total_ivs} points</code> 
-                    (Growth: {growth_score} | Clinical: {clinical_score} | Feeding: {feeding_score} | SES: {ses_pillar_score})
-                </p>
                 <div style="margin: 15px 0;">
                     <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem; text-align: left; color: inherit;">
                         <thead>
