@@ -32,7 +32,7 @@ def load_who_standards():
 model = load_model()
 
 def get_expected_growth(age_months, gender):
-    """Returns approximate WHO median weight (kg) and height (cm) for given age and gender."""
+    """Returns approximate expected weight (kg) using Nelson's formulas and WHO median height (cm) for given age and gender."""
     milestones = {
         'Male': {
             0: (3.3, 50.0), 6: (7.9, 68.0), 12: (9.6, 75.7),
@@ -45,13 +45,29 @@ def get_expected_growth(age_months, gender):
     }
     m = milestones[gender]
     ages = sorted(m.keys())
-    if age_months in m: return m[age_months]
-    lower_age = max([a for a in ages if a < age_months])
-    upper_age = min([a for a in ages if a > age_months])
-    lw, lh = m[lower_age]
-    uw, uh = m[upper_age]
-    fraction = (age_months - lower_age) / (upper_age - lower_age)
-    return round(lw + fraction * (uw - lw), 1), round(lh + fraction * (uh - lh), 1)
+    
+    # 1. Height: Interpolate WHO milestones
+    if age_months in m:
+        expected_height = m[age_months][1]
+    else:
+        lower_age = max([a for a in ages if a < age_months])
+        upper_age = min([a for a in ages if a > age_months])
+        lh = m[lower_age][1]
+        uh = m[upper_age][1]
+        fraction = (age_months - lower_age) / (upper_age - lower_age)
+        expected_height = lh + fraction * (uh - lh)
+        
+    # 2. Weight: Nelson's Pediatric Formulas
+    if age_months < 12:
+        # Infants (1 to 12 months): Weight (kg) = (Age in months + 9) / 2
+        expected_weight = (age_months + 9.0) / 2.0
+    else:
+        # Toddlers and Young Children (12 to 60 months): Weight (kg) = (Age in years * 2) + 8
+        age_in_years = age_months / 12.0
+        expected_weight = (age_in_years * 2.0) + 8.0
+        
+    return round(expected_weight, 1), round(expected_height, 1)
+
 
 def calculate_whz(height, weight, gender):
     """Calculates WHZ using WHO LMS method."""
