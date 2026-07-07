@@ -13,7 +13,7 @@ st.set_page_config(
 )
 
 # --- 1. Load Model & Standards ---
-# @st.cache_resource
+@st.cache_resource
 def load_model():
     """Loads the trained Random Forest model."""
     model_path = 'malnutrition_model.pkl'
