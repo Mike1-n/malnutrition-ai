@@ -209,22 +209,41 @@ def plot_whz_trajectory_with_regions(df):
     return chart
 
 # --- 2. Styles & Theme ---
-st.session_state.theme = 'dark'
+if 'theme_toggle' not in st.session_state:
+    st.session_state.theme_toggle = True
 
-theme_css = """
-:root {
-    --primary-color: #5dade2; 
-    --secondary-color: #48c9b0; 
-    --background-color: #080b11; 
-    --text-color: #ffffff; 
-    --text-muted: #b0b0b0;
-    --card-bg: #121620; 
-    --danger-color: #ff6b6b; 
-    --warning-color: #ffa502; 
-    --success-color: #2ed573;
-    --metric-border: #1e2538;
-}
-"""
+st.session_state.theme = 'dark' if st.session_state.theme_toggle else 'light'
+
+if st.session_state.theme == 'dark':
+    theme_css = """
+    :root {
+        --primary-color: #5dade2; 
+        --secondary-color: #48c9b0; 
+        --background-color: #0e1117; 
+        --text-color: #ffffff; 
+        --text-muted: #b0b0b0;
+        --card-bg: #262730; 
+        --danger-color: #ff6b6b; 
+        --warning-color: #ffa502; 
+        --success-color: #2ed573;
+        --metric-border: #333333;
+    }
+    """
+else:
+    theme_css = """
+    :root {
+        --primary-color: #2980b9; 
+        --secondary-color: #16a085; 
+        --background-color: #f0f2f6; 
+        --text-color: #1e1e1e; 
+        --text-muted: #666666;
+        --card-bg: #ffffff; 
+        --danger-color: #e74c3c; 
+        --warning-color: #f39c12; 
+        --success-color: #27ae60;
+        --metric-border: #e0e0e0;
+    }
+    """
 
 st.markdown(f"""
     <style>
@@ -417,15 +436,8 @@ st.markdown(f"""
         transition: width 0.5s ease-in-out;
     }}
 
-    .mobile-nav-wrapper {{
-        display: none;
-    }}
-    
+    /* Mobile Responsive Optimizations */
     @media (max-width: 768px) {{
-        [data-testid="stSidebar"] {{
-            width: 200px !important;
-            min-width: 200px !important;
-        }}
         /* Force columns to stack vertically on phone screens */
         [data-testid="column"] {{
             width: 100% !important;
@@ -526,7 +538,13 @@ if sb_url == "https://your-project.supabase.co":
 if sb_key == "your-anon-key":
     sb_key = ""
 
-# Database connection status removed per user request
+# Database connection status
+st.sidebar.subheader("🔌 Database Connection")
+
+if sb_url and sb_key:
+    st.sidebar.success("Connected to Supabase")
+else:
+    st.sidebar.info("Offline Mode (Saving disabled)")
 
 # --- Authentication Overlay ---
 if sb_url and sb_key:
@@ -534,219 +552,127 @@ if sb_url and sb_key:
         st.session_state.auth_user = None
 
     if st.session_state.auth_user is None:
-        # Sync switch layout states via URL query parameter triggers
-        q_params = st.query_params
-        if "mode" in q_params:
-            if q_params["mode"] in ["login", "signup"]:
-                st.session_state.auth_mode = "login" if q_params["mode"] == "login" else "signup"
-        elif 'auth_mode' not in st.session_state:
-            st.session_state.auth_mode = "login"
-
-        auth_error = st.session_state.get('auth_error_msg', '')
-        auth_success = st.session_state.get('auth_success_msg', '')
-        # Inject Custom CSS to replicate the requested screenshot UI exactly (minus the background image)
+        # Inject Custom CSS for Instagram aesthetic login page
         st.markdown("""
         <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-            
-            /* Clean background color for the application page - Dark Theme */
+            /* Custom Instagram login style override */
             div[data-testid="stAppViewContainer"] {
-                background-color: #0b0f19 !important;
-                background-image: none !important;
+                background-color: #fafafa !important;
             }
-            /* Hide Streamlit header & sidebar for clean look */
+            /* Hide the default Streamlit header and sidebar for clean login */
             header {visibility: hidden;}
             [data-testid="stSidebar"] {visibility: hidden;}
             [data-testid="stSidebarCollapsedControl"] {display: none;}
             
-            /* Target Streamlit main block container */
-            div[data-testid="stVerticalBlock"] > div {
-                background: transparent !important;
-            }
-            
-            .auth-container {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                min-height: 80vh;
-                font-family: 'Inter', sans-serif;
-            }
-            div[data-testid="column"]:has(.auth-card-anchor) {
-                background-color: #171d2b !important;
-                border: 1.5px solid #283042 !important;
-                border-radius: 0px !important;
-                padding: 45px 40px !important;
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), 0 1px 8px rgba(0, 0, 0, 0.2) !important;
-            }
-            
-            div[data-testid="column"]:has(.auth-card-anchor) label,
-            div[data-testid="column"]:has(.auth-card-anchor) p,
-            div[data-testid="column"]:has(.auth-card-anchor) span {
-                color: #ffffff !important;
-            }
-            
-            /* Streamlit text input styling when inside auth card */
-            div[data-testid="column"]:has(.auth-card-anchor) div[data-testid="stTextInput"] label {
-                color: #e5e7eb !important;
-            }
-            
-            .brand-header {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 10px;
-                margin-bottom: 24px;
-            }
-            .brand-logo {
-                width: 42px;
-                height: 42px;
-            }
-            .brand-name {
-                font-size: 1.8rem;
-                font-weight: 700;
-                color: #3498db;
-                margin: 0;
-            }
-            .brand-name span {
-                color: #2ecc71;
-            }
-            
-            .welcome-title {
-                font-size: 1.5rem;
-                font-weight: 700;
-                color: #ffffff;
-                text-align: center;
-                margin-bottom: 6px;
-            }
-            .welcome-subtitle {
-                font-size: 0.95rem;
-                color: #9ca3af;
-                text-align: center;
-                margin-bottom: 30px;
-            }
-            
-            .form-group {
-                margin-bottom: 20px;
-            }
-            .form-group label {
-                font-size: 0.9rem;
-                font-weight: 600;
-                color: #e5e7eb;
-                margin-bottom: 8px;
-                display: block;
-            }
-            .form-group input {
-                width: 100%;
-                background-color: #0b0f19;
-                border: 1px solid #374151;
-                border-radius: 6px;
-                padding: 12px 14px;
-                font-size: 0.95rem;
-                color: #ffffff;
-                box-sizing: border-box;
-                outline: none;
-            }
-            .form-group input:focus {
-                border-color: #3498db;
-                box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3);
-            }
-            
-            .btn-submit {
-                width: 100%;
-                background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-                border: none;
-                border-radius: 6px;
-                color: #ffffff;
-                font-weight: 600;
-                font-size: 0.95rem;
-                padding: 12px 20px;
-                cursor: pointer;
-                transition: background-color 0.2s ease;
-                margin-top: 10px;
-            }
-            .btn-submit:hover {
-                background: linear-gradient(135deg, #4fa7e6 0%, #3498db 100%);
-            }
-            
-            .toggle-footer {
+            .instagram-logo {
+                font-family: 'Billabong', 'Grand Hotel', 'Brush Script MT', cursive;
+                font-size: 3.2rem;
                 text-align: center;
                 margin-top: 25px;
-                font-size: 0.92rem;
-                color: #9ca3af;
+                margin-bottom: 35px;
+                color: #262626;
+                letter-spacing: 1px;
             }
-            .toggle-footer a {
-                color: #3498db;
-                font-weight: 600;
+            .insta-card {
+                background-color: #ffffff;
+                border: 1px solid #dbdbdb;
+                padding: 40px;
+                border-radius: 1px;
+                margin-bottom: 10px;
+                max-width: 350px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .insta-subcard {
+                background-color: #ffffff;
+                border: 1px solid #dbdbdb;
+                padding: 20px;
+                border-radius: 1px;
+                text-align: center;
+                max-width: 350px;
+                margin-left: auto;
+                margin-right: auto;
+                font-size: 0.9rem;
+                color: #262626;
+            }
+            .insta-subcard a {
+                color: #0095f6;
                 text-decoration: none;
-                cursor: pointer;
+                font-weight: 600;
             }
-            .toggle-footer a:hover {
-                text-decoration: underline;
-            }
-            
-            .error-message {
-                background-color: rgba(239, 68, 68, 0.15);
-                border: 1px solid rgba(239, 68, 68, 0.4);
-                color: #fca5a5;
-                padding: 10px;
-                border-radius: 6px;
-                font-size: 0.85rem;
-                margin-bottom: 20px;
+            .separator-container {
+                display: flex;
+                align-items: center;
                 text-align: center;
+                margin: 20px 0;
             }
-            .success-message {
-                background-color: rgba(16, 185, 129, 0.15);
-                border: 1px solid rgba(16, 185, 129, 0.4);
-                color: #a7f3d0;
-                padding: 10px;
-                border-radius: 6px;
-                font-size: 0.85rem;
-                margin-bottom: 20px;
-                text-align: center;
+            .separator-line {
+                flex-grow: 1;
+                height: 1px;
+                background-color: #dbdbdb;
+            }
+            .separator-text {
+                padding: 0 18px;
+                color: #8e8e8e;
+                font-size: 0.8rem;
+                font-weight: 600;
+                text-transform: uppercase;
+            }
+            /* Styling inputs & buttons to look native */
+            div[data-testid="stTextInput"] input {
+                background-color: #fafafa !important;
+                border: 1px solid #dbdbdb !important;
+                border-radius: 3px !important;
+                padding: 9px 8px 7px 8px !important;
+                font-size: 0.75rem !important;
+                color: #262626 !important;
+            }
+            div[data-testid="stTextInput"] input:focus {
+                border-color: #a8a8a8 !important;
+                box-shadow: none !important;
+            }
+            .insta-btn button {
+                background-color: #0095f6 !important;
+                border: 1px solid transparent !important;
+                border-radius: 4px !important;
+                color: #ffffff !important;
+                font-weight: 600 !important;
+                font-size: 0.9rem !important;
+                padding: 5px 9px !important;
+                cursor: pointer !important;
+                box-shadow: none !important;
+                width: 100% !important;
+            }
+            .insta-btn button:hover {
+                background-color: #1877f2 !important;
+                transform: none !important;
             }
         </style>
+        <link href="https://fonts.cdnfonts.com/css/billabong" rel="stylesheet">
         """, unsafe_allow_html=True)
-
-        if 'auth_mode' not in st.session_state:
-            st.session_state.auth_mode = "login"
-
-        # Embed custom HTML form that communicates inputs back to Streamlit
-        import urllib.parse
         
-        # Build query parameters or hidden values to pass logic back to Streamlit
-        # We can use standard Streamlit inputs hidden inside the container using columns or custom layout components
-        c_auth1, c_auth2, c_auth3 = st.columns([1, 2, 1])
+        c_auth1, c_auth2, c_auth3 = st.columns([1, 1.5, 1])
         with c_auth2:
-            st.markdown('<div class="auth-card-anchor"></div>', unsafe_allow_html=True)
+            st.markdown('<div class="insta-card">', unsafe_allow_html=True)
+            st.markdown('<div class="instagram-logo">Malnutrition AI</div>', unsafe_allow_html=True)
             
-            if st.session_state.auth_mode == "login":
-                st.markdown('<h2 class="welcome-title">Welcome to MalnutritionAI</h2>', unsafe_allow_html=True)
-                st.markdown('<p class="welcome-subtitle">Sign in to access your dashboard</p>', unsafe_allow_html=True)
+            # Use query parameter or session state to switch login/signup style
+            if 'insta_mode' not in st.session_state:
+                st.session_state.insta_mode = "login"
                 
-                if auth_error:
-                    st.markdown(f'<div class="error-message">{auth_error}</div>', unsafe_allow_html=True)
-                
-                email_input = st.text_input("Email Address *", placeholder="youremail@example.com", key="insta_email")
-                
-                # Render inline password label + forgot link using html injection
-                st.markdown("""
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <label style="font-size: 0.9rem; font-weight: 600; color: #e5e7eb; font-family: 'Inter', sans-serif;">Password</label>
-                    <a href="#" style="color: #3498db; font-weight: 600; text-decoration: none; font-size: 0.85rem; font-family: 'Inter', sans-serif;">Forgot password?</a>
-                </div>
-                """, unsafe_allow_html=True)
-                pass_input = st.text_input("Password_hidden_label", type="password", placeholder="••••••••", key="insta_pass", label_visibility="collapsed")
-                
-                import database as db
-                
-                st.markdown('<div class="action-btn-container">', unsafe_allow_html=True)
-                login_btn = st.button("Sign In", key="insta_login_btn")
+            email_input = st.text_input("Email", placeholder="Phone number, username, or email", label_visibility="collapsed")
+            pass_input = st.text_input("Password", type="password", placeholder="Password", label_visibility="collapsed")
+            
+            import database as db
+            
+            if st.session_state.insta_mode == "login":
+                st.markdown('<div class="insta-btn">', unsafe_allow_html=True)
+                login_btn = st.button("Log In", key="insta_login_btn")
                 st.markdown('</div>', unsafe_allow_html=True)
                 
                 if login_btn:
                     if not email_input or not pass_input:
-                        st.session_state.auth_error_msg = "Please fill in both fields."
-                        st.rerun()
+                        st.error("Please fill in both email and password fields.")
                     else:
                         with st.spinner("Logging in..."):
                             success, result = db.signin_user(sb_url, sb_key, email_input, pass_input)
@@ -755,8 +681,7 @@ if sb_url and sb_key:
                                 profile = db.get_user_profile(sb_url, sb_key, user_id)
                                 if profile:
                                     if not profile.get("is_approved", False):
-                                        st.session_state.auth_error_msg = "⚠️ Access Pending: Your account is awaiting admin approval."
-                                        st.rerun()
+                                        st.error("⚠️ Access Blocked: Your account is pending administrator approval.")
                                     else:
                                         st.session_state.auth_user = {
                                             "email": email_input,
@@ -764,66 +689,57 @@ if sb_url and sb_key:
                                             "user_id": user_id,
                                             "is_admin": profile.get("is_admin", False)
                                         }
-                                        st.session_state.auth_error_msg = ""
+                                        st.success("Success! Loading...")
                                         st.rerun()
                                 else:
-                                    st.session_state.auth_error_msg = "Profile not found. Contact administrator."
-                                    st.rerun()
+                                    st.error("Profile initialization incomplete. Please try again.")
                             else:
-                                st.session_state.auth_error_msg = f"Authentication Failed: {result}"
-                                st.rerun()
-                                
+                                st.error(f"Authentication Failed: {result}")
+                
+                st.markdown("""
+                <div class="separator-container">
+                    <div class="separator-line"></div>
+                    <div class="separator-text">OR</div>
+                    <div class="separator-line"></div>
+                </div>
+                <div style="text-align: center; margin-top: 15px;">
+                    <a href="#" style="color: #385185; font-weight: 600; text-decoration: none; font-size: 0.85rem;">Forgot password?</a>
+                </div>
+                """, unsafe_allow_html=True)
+                
             else:
-                st.markdown('<h2 class="welcome-title">Create Account</h2>', unsafe_allow_html=True)
-                st.markdown('<p class="welcome-subtitle">Sign up to get started</p>', unsafe_allow_html=True)
-                
-                if auth_error:
-                    st.markdown(f'<div class="error-message">{auth_error}</div>', unsafe_allow_html=True)
-                if auth_success:
-                    st.markdown(f'<div class="success-message">{auth_success}</div>', unsafe_allow_html=True)
-                
-                email_input = st.text_input("Email Address *", placeholder="youremail@example.com", key="insta_email")
-                pass_input = st.text_input("Password *", type="password", placeholder="••••••••", key="insta_pass")
-                
-                import database as db
-                
-                st.markdown('<div class="action-btn-container">', unsafe_allow_html=True)
+                st.markdown('<div class="insta-btn">', unsafe_allow_html=True)
                 signup_btn = st.button("Sign Up", key="insta_signup_btn")
                 st.markdown('</div>', unsafe_allow_html=True)
                 
                 if signup_btn:
                     if not email_input or not pass_input:
-                        st.session_state.auth_error_msg = "Please fill in both fields."
-                        st.rerun()
+                        st.error("Please fill in both fields.")
                     elif len(pass_input) < 6:
-                        st.session_state.auth_error_msg = "Password must be at least 6 characters."
-                        st.rerun()
+                        st.error("Password must be at least 6 characters.")
                     else:
                         with st.spinner("Signing up..."):
                             success, result = db.signup_user(sb_url, sb_key, email_input, pass_input)
                             if success:
-                                st.session_state.auth_success_msg = "Account created! Awaiting administrator approval."
-                                st.session_state.auth_error_msg = ""
-                                st.rerun()
+                                st.success("Account created successfully! Admin approval required.")
                             else:
-                                st.session_state.auth_error_msg = f"Registration Failed: {result}"
-                                st.rerun()
+                                st.error(f"Failed to create account: {result}")
             
-            # anchor container is styled via :has selector
+            st.markdown('</div>', unsafe_allow_html=True) # close insta-card
             
-            # Toggle Mode Footer (on the same line as a link rather than separate buttons)
-            if st.session_state.auth_mode == "login":
-                st.markdown('<div class="toggle-footer">Don\'t have an account? <a href="?mode=signup" target="_self" id="toggle-signup-link">Sign Up</a></div>', unsafe_allow_html=True)
-                
-                # Check URL or click actions using a hidden trigger
-                # Since Streamlit doesn't naturally handle raw href query param reloads inline without refreshing,
-                # we can use a query parameter reload trick, or simply use a tiny link click handler.
-                # In Streamlit, a clean link style can be achieved by using st.button with custom inline styling.
-                # Let's override .toggle-footer stButton styles to look like a single inline link.
+            # Toggle Mode Card
+            if st.session_state.insta_mode == "login":
+                st.markdown('<div class="insta-subcard">Don\'t have an account? ', unsafe_allow_html=True)
+                if st.button("Sign up", key="toggle_signup_btn", type="secondary"):
+                    st.session_state.insta_mode = "signup"
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
             else:
-                st.markdown('<div class="toggle-footer">Have an account? <a href="?mode=login" target="_self" id="toggle-login-link">Sign In</a></div>', unsafe_allow_html=True)
-            
-            pass
+                st.markdown('<div class="insta-subcard">Have an account? ', unsafe_allow_html=True)
+                if st.button("Log in", key="toggle_login_btn", type="secondary"):
+                    st.session_state.insta_mode = "login"
+                    st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
                 
         st.stop()
 
@@ -841,7 +757,7 @@ if sb_url and sb_key and st.session_state.get('auth_user') is not None:
     is_admin = st.session_state.auth_user.get("is_admin", False)
     if is_admin:
         st.sidebar.markdown("🛡️ **Role**: `Administrator`")
-    if st.sidebar.button("🔓 Logout", key="logout_sidebar_btn", use_container_width=True):
+    if st.sidebar.button("🔓 Logout", use_container_width=True):
         st.session_state.auth_user = None
         st.rerun()
     st.sidebar.markdown("---")
@@ -850,30 +766,11 @@ nav_options = ["🏥 New Assessment", "📂 History & Growth Trends"]
 if is_admin:
     nav_options.append("🔑 Admin Panel")
 
-# Synchronization of app_mode
-if 'app_mode' not in st.session_state:
-    st.session_state.app_mode = nav_options[0]
-
-def on_sidebar_change():
-    st.session_state.app_mode = st.session_state.sidebar_nav
-
-def on_mobile_change():
-    st.session_state.app_mode = st.session_state.mobile_nav
-
-# Sidebar navigation (desktop)
-app_mode_sidebar = st.sidebar.radio(
+app_mode = st.sidebar.radio(
     "Navigation Menu",
     nav_options,
-    key="sidebar_nav",
-    index=nav_options.index(st.session_state.app_mode) if st.session_state.app_mode in nav_options else 0,
-    on_change=on_sidebar_change,
     label_visibility="collapsed"
 )
-
-# Mobile navigation removed per user request (sidebar retained on all screens)
-
-# Final resolved app mode
-app_mode = st.session_state.app_mode
 
 st.sidebar.markdown("---")
 
@@ -930,12 +827,19 @@ def get_unique_subject_id():
     return f"M{next_num:03d}"
 
 # --- 4. Header ---
-st.markdown("""
-<div style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);">
-    <h1 style="color: white !important; margin-bottom: 5px; font-size: 2.2rem;">🏥 Child Malnutrition Analysis</h1>
-    <p style="color: rgba(255,255,255,0.9) !important; font-size: 1.1rem; margin-bottom: 0;">AI-Powered Trend Risk Prediction & Clinical Decision Support</p>
-</div>
-""", unsafe_allow_html=True)
+head_col, tog_col = st.columns([6, 1])
+
+with tog_col:
+    st.write("") # Margin top
+    st.toggle("🌙 Mode", key="theme_toggle")
+
+with head_col:
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); padding: 25px; border-radius: 15px; color: white; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);">
+        <h1 style="color: white !important; margin-bottom: 5px; font-size: 2.2rem;">🏥 Child Malnutrition Analysis</h1>
+        <p style="color: rgba(255,255,255,0.9) !important; font-size: 1.1rem; margin-bottom: 0;">AI-Powered Trend Risk Prediction & Clinical Decision Support</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 if model is None:
     st.error("⚠️ Model not found. Please train the model first.")

@@ -23,7 +23,7 @@ def save_assessment(url, key, data):
     headers = get_headers(key)
     headers["Prefer"] = "resolution=merge-duplicates"
     try:
-        response = requests.post(endpoint, headers=headers, json=data)
+        response = requests.post(endpoint, headers=headers, json=data, timeout=7)
         response.raise_for_status()
         return True, "Assessment saved successfully to Supabase!"
     except requests.exceptions.HTTPError as e:
@@ -42,7 +42,7 @@ def get_all_assessments(url, key):
     # Order by ID or created_at descending (latest first)
     endpoint = f"{url.rstrip('/')}/rest/v1/assessments?select=*&order=id.desc"
     try:
-        response = requests.get(endpoint, headers=get_headers(key))
+        response = requests.get(endpoint, headers=get_headers(key), timeout=7)
         response.raise_for_status()
         return response.json()
     except Exception as e:
@@ -56,7 +56,7 @@ def get_assessments_by_subject(url, key, subject_id):
     # Order by ID or created_at ascending (chronological order for trends)
     endpoint = f"{url.rstrip('/')}/rest/v1/assessments?subject_id=eq.{subject_id}&order=id.asc"
     try:
-        response = requests.get(endpoint, headers=get_headers(key))
+        response = requests.get(endpoint, headers=get_headers(key), timeout=7)
         response.raise_for_status()
         return response.json()
     except Exception as e:
@@ -77,7 +77,7 @@ def signup_user(url, key, email, password):
         "password": password
     }
     try:
-        response = requests.post(endpoint, headers=headers, json=payload)
+        response = requests.post(endpoint, headers=headers, json=payload, timeout=7)
         res_data = response.json()
         if response.status_code in (200, 201):
             return True, res_data
@@ -101,7 +101,7 @@ def signin_user(url, key, email, password):
         "password": password
     }
     try:
-        response = requests.post(endpoint, headers=headers, json=payload)
+        response = requests.post(endpoint, headers=headers, json=payload, timeout=7)
         res_data = response.json()
         if response.status_code == 200:
             return True, res_data
@@ -117,7 +117,7 @@ def get_user_profile(url, key, user_id):
     """
     endpoint = f"{url.rstrip('/')}/rest/v1/user_profiles?id=eq.{user_id}&select=*"
     try:
-        response = requests.get(endpoint, headers=get_headers(key))
+        response = requests.get(endpoint, headers=get_headers(key), timeout=7)
         response.raise_for_status()
         profiles = response.json()
         if profiles:
@@ -133,7 +133,7 @@ def get_pending_profiles(url, key):
     """
     endpoint = f"{url.rstrip('/')}/rest/v1/user_profiles?is_approved=eq.false&select=*&order=created_at.asc"
     try:
-        response = requests.get(endpoint, headers=get_headers(key))
+        response = requests.get(endpoint, headers=get_headers(key), timeout=7)
         response.raise_for_status()
         return response.json()
     except Exception as e:
@@ -147,7 +147,7 @@ def approve_profile(url, key, user_id):
     endpoint = f"{url.rstrip('/')}/rest/v1/user_profiles?id=eq.{user_id}"
     payload = {"is_approved": True}
     try:
-        response = requests.patch(endpoint, headers=get_headers(key), json=payload)
+        response = requests.patch(endpoint, headers=get_headers(key), json=payload, timeout=7)
         response.raise_for_status()
         return True, "User approved successfully!"
     except Exception as e:
